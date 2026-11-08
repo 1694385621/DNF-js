@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      5.81
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查）。
+// @version      5.82
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；新用户名地址失败时自动回退旧用户名地址）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
 // @icon         https://shileshihu.cn/favicon.ico
-// @updateURL    https://cdn.jsdelivr.net/gh/15186474463/DNF-js@main/dnf-helper.js
-// @downloadURL  https://cdn.jsdelivr.net/gh/15186474463/DNF-js@main/dnf-helper.js
+// @updateURL    https://cdn.jsdelivr.net/gh/1694385621/DNF-js@main/dnf-helper.js
+// @downloadURL  https://cdn.jsdelivr.net/gh/1694385621/DNF-js@main/dnf-helper.js
 // @grant        none
 // @run-at       document-start
 // ==/UserScript==
@@ -243,7 +243,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '5.81';
+    const VERSION = '5.82';
 
     /**
      * 可持久化的用户设置白名单（只存这些，其它运行期配置不写盘）。
@@ -859,9 +859,14 @@
      * 失败一律静默（断网 / 404 / JSON 坏 / 8s 超时都只 debug），不弹错误。
      * 节流：同一版本 24 小时内只自动提示一次（用户点开也算一次）。
      * ============================================================ */
-    const UPDATE_SCRIPT_URL = 'https://cdn.jsdelivr.net/gh/15186474463/DNF-js@main/dnf-helper.js';
-    const UPDATE_VERSION_URL = 'https://cdn.jsdelivr.net/gh/15186474463/DNF-js@main/version.json';
+    const UPDATE_CDN_BASE = 'https://cdn.jsdelivr.net/gh/';
+    const UPDATE_REPO_PATH = '/DNF-js@main/';
+    const UPDATE_OWNER = '1694385621';          // 当前 GitHub 用户名
+    const UPDATE_LEGACY_OWNER = '15186474463';  // 改名前的旧用户名（GitHub 改名会重定向，jsDelivr 多数情况仍可读，用作兜底）
+    const UPDATE_SCRIPT_URL = UPDATE_CDN_BASE + UPDATE_OWNER + UPDATE_REPO_PATH + 'dnf-helper.js';
+    const UPDATE_VERSION_URL = UPDATE_CDN_BASE + UPDATE_OWNER + UPDATE_REPO_PATH + 'version.json';
     const UPDATE_TIMEOUT_MS = 8000;
+    const UPDATE_LEGACY_TIMEOUT_MS = 5000;      // 兜底源超时短一点，避免两个都慢时拖太久
     const UPDATE_PROMPT_TTL_MS = 24 * 60 * 60 * 1000;
     const UPDATE_PROMPT_KEY = 'dnf_update_prompted_v1';
     const UPDATE_AUTO_DELAY_MS = 8000;
@@ -899,29 +904,50 @@
         try { localStorage.setItem(UPDATE_PROMPT_KEY, JSON.stringify({ version: version, at: Date.now() })); } catch (_) { }
     }
 
-    /** 拉取 version.json（8s 超时 + 时间戳绕缓存）；任何失败返回 null */
-    async function fetchUpdateManifest() {
+    /** 指定用户名的 version.json 地址 */
+    function updateVersionUrl(owner) { return UPDATE_CDN_BASE + owner + UPDATE_REPO_PATH + 'version.json'; }
+    /** 指定用户名的 dnf-helper.js 地址 */
+    function updateScriptUrl(owner) { return UPDATE_CDN_BASE + owner + UPDATE_REPO_PATH + 'dnf-helper.js'; }
+    /** 从下载地址里取 GitHub 用户名（.../gh/<owner>/...）；取不到返回空串 */
+    function ownerOfUpdateUrl(u) {
+        const m = /^https?:\/\/[^/]+\/gh\/([^/@?#]+)\//i.exec(String(u == null ? '' : u));
+        return m ? m[1] : '';
+    }
+
+    /** 从指定用户名拉 version.json（超时 + 时间戳绕缓存）；任何失败返回 null */
+    async function fetchManifestFrom(owner, timeoutMs) {
         if (typeof fetch !== 'function') return null;
         const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
-        const timer = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (_) { } }, UPDATE_TIMEOUT_MS) : 0;
+        const timer = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (_) { } }, timeoutMs) : 0;
         try {
-            const url = UPDATE_VERSION_URL + (UPDATE_VERSION_URL.indexOf('?') === -1 ? '?' : '&') + '_t=' + Date.now();
+            const base = updateVersionUrl(owner);
+            const url = base + '?_t=' + Date.now();
             const resp = await fetch(url, { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined });
             if (!resp || !resp.ok) return null;
             const data = await resp.json();
             if (!data || typeof data !== 'object') return null;
             const version = typeof data.version === 'string' ? data.version.trim() : '';
             if (!/^\d+(\.\d+)*$/.test(version.replace(/^v/i, ''))) return null;
-            // url 只接受 http(s)，其余回落到固定脚本地址，避免被塞乱七八糟的协议
+            // url 只接受 http(s)，且用户名必须与本次成功的源一致，否则按本次源拼 dnf-helper.js，
+            // 避免「新地址 404、旧地址兜底成功」时把用户又引回打不开的新地址。
             const raw = typeof data.url === 'string' ? data.url.trim() : '';
-            const target = /^https?:\/\//i.test(raw) ? raw : UPDATE_SCRIPT_URL;
+            const target = (/^https?:\/\//i.test(raw) && ownerOfUpdateUrl(raw) === String(owner))
+                ? raw : updateScriptUrl(owner);
             const notes = typeof data.notes === 'string' ? data.notes.trim() : '';
-            return { version: version, url: target, notes: notes };
+            return { version: version, url: target, notes: notes, owner: String(owner) };
         } catch (_) {
             return null;
         } finally {
             if (timer) clearTimeout(timer);
         }
+    }
+
+    /** 先查新用户名地址；失败再回退旧用户名地址（v5.82）。两个都失败返回 null */
+    async function fetchUpdateManifest() {
+        const primary = await fetchManifestFrom(UPDATE_OWNER, UPDATE_TIMEOUT_MS);
+        if (primary) return primary;
+        log('新地址不可用（' + UPDATE_OWNER + '），回退旧地址 ' + UPDATE_LEGACY_OWNER);
+        return await fetchManifestFrom(UPDATE_LEGACY_OWNER, UPDATE_LEGACY_TIMEOUT_MS);
     }
 
     /** 打开下载页（只跳转，不在页面里执行任何远端代码） */
