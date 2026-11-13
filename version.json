@@ -1,1 +1,1 @@
-{"version":"5.82","url":"https://cdn.jsdelivr.net/gh/1694385621/DNF-js@main/dnf-helper.js","notes":"更新地址迁移到新用户名 + 旧地址兜底。"}
+{"version":"5.85","url":"https://cdn.jsdelivr.net/gh/1694385621/DNF-js@main/dnf-helper.js","notes":"顶栏「世界BOSS」去重与「兑换码」移到商店「通用制作」旁改为仅移动端（≤760px）生效，桌面端保持游戏原样。"}

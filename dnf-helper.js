@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      5.84
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；新用户名地址失败时自动回退旧用户名地址）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁 + 移除仓库区块排序。
+// @version      5.85
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；新用户名地址失败时自动回退旧用户名地址）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -243,7 +243,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '5.84';
+    const VERSION = '5.85';
 
     /**
      * 可持久化的用户设置白名单（只存这些，其它运行期配置不写盘）。
@@ -4572,14 +4572,17 @@
         try { ATLAS_API.toggle(); } catch (e) { log('图鉴打开失败', e); }
     }
     /* ============================================================
-     * 游戏界面优化（v5.83）
+     * 游戏界面优化（v5.83 引入，v5.85 改为仅移动端生效）
      * ------------------------------------------------------------
-     * ① 顶部与功能栏重复的「世界BOSS」按钮：隐藏（不删节点，避免 Vue 重渲染报错）
-     * ② 「兑换码」按钮移到商店子标签「通用制作」右侧：原生按钮保留但隐藏，
-     *    在旁边放一个同款克隆节点转发 click，避免直接搬动 Vue 管理的节点导致
-     *    下一次 patch 把它挪回去或报错。
-     * 只做这两个纯展示层调整，不调用任何游戏接口。
+     * ① 隐藏顶部与功能栏重复的「世界BOSS」按钮
+     * ② 「兑换码」移到商店子标签「通用制作」右侧（克隆节点转发 click）
+     * 分界判据：跟游戏自身布局一致。游戏桌面样式用的是 @media(min-width:761px)，
+     * 所以 max-width:760px 即游戏的移动端布局，用 matchMedia 实时判断，
+     * 不用 userAgent（桌面浏览器缩窄窗口也会切到移动布局，那正是要的效果）。
+     * 桌面端完全不动：世界BOSS 照旧、兑换码留在顶栏、商店里不出现克隆。
+     * 只做展示层调整，不调用任何游戏接口。
      * ============================================================ */
+    const UI_MOBILE_MAX_WIDTH = 760;
     let _redeemCloneEl = null;
     let _uiTweakMissAt = 0;
 
@@ -4604,6 +4607,27 @@
         return null;
     }
 
+    /** 是否游戏的移动端布局 */
+    function isMobileGameLayout() {
+        try { return window.matchMedia('(max-width: ' + UI_MOBILE_MAX_WIDTH + 'px)').matches; }
+        catch (_) { return window.innerWidth <= UI_MOBILE_MAX_WIDTH; }
+    }
+
+    /** 隐藏前先记住元素原本的内联 display，撤回时原样还回去 */
+    function markHidden(el, markAttr) {
+        el.setAttribute(markAttr, '1');
+        el.setAttribute('data-dnf-prev-display', el.style.display || '');
+        el.style.setProperty('display', 'none', 'important');
+    }
+
+    function unmarkHidden(el, markAttr) {
+        const prev = el.getAttribute('data-dnf-prev-display') || '';
+        el.removeAttribute(markAttr);
+        el.removeAttribute('data-dnf-prev-display');
+        if (prev) el.style.display = prev;
+        else el.style.removeProperty('display');
+    }
+
     /** ① 隐藏顶部与功能栏重复的「世界BOSS」（只动「兑换码」的同级兄弟） */
     function hideDuplicateWorldBoss(redeem) {
         const bar = redeem && redeem.parentElement;
@@ -4613,8 +4637,7 @@
             const el = nodes[i];
             if (el === redeem || el.hasAttribute('data-dnf-wb-hidden')) continue;
             if (gameButtonText(el) !== '世界BOSS') continue;
-            el.setAttribute('data-dnf-wb-hidden', '1');
-            el.style.setProperty('display', 'none', 'important');
+            markHidden(el, 'data-dnf-wb-hidden');
         }
     }
 
@@ -4623,17 +4646,15 @@
         const produce = findGameButton('通用制作');
         if (!produce || !produce.parentElement) return;
         // 原生按钮只隐藏不删除：克隆体 click 时还要靠它触发游戏自己的兑换码弹窗
-        if (!redeem.hasAttribute('data-dnf-redeem-native')) {
-            redeem.setAttribute('data-dnf-redeem-native', '1');
-        }
-        redeem.style.setProperty('display', 'none', 'important');
+        if (!redeem.hasAttribute('data-dnf-redeem-native')) markHidden(redeem, 'data-dnf-redeem-native');
         const row = produce.parentElement;
         if (!_redeemCloneEl) {
             _redeemCloneEl = redeem.cloneNode(true);
             _redeemCloneEl.removeAttribute('id');
             _redeemCloneEl.removeAttribute('data-dnf-redeem-native');
+            _redeemCloneEl.removeAttribute('data-dnf-prev-display');
             _redeemCloneEl.setAttribute('data-dnf-redeem-clone', '1');
-            _redeemCloneEl.removeAttribute('style');
+            _redeemCloneEl.style.removeProperty('display');
             _redeemCloneEl.title = '兑换码';
             _redeemCloneEl.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -4641,21 +4662,53 @@
                 const src = findGameButton('兑换码');
                 if (src) src.click();
             }, true);
-        } else if (_redeemCloneEl.parentElement !== row) {
-            // 父级被 Vue 重建过：把 clone 从旧位置取出来复用（保留已绑定的点击转发）
         }
         if (_redeemCloneEl.parentElement !== row || _redeemCloneEl.previousElementSibling !== produce) {
             produce.insertAdjacentElement('afterend', _redeemCloneEl);
         }
     }
 
+    /** 撤回全部改动：删克隆、还原被隐藏的原生按钮（桌面端 / 切回桌面宽度时调用） */
+    function revertGameUiTweaks() {
+        const clones = document.querySelectorAll('[data-dnf-redeem-clone]');
+        for (let i = 0; i < clones.length; i++) clones[i].remove();
+        _redeemCloneEl = null;
+        const natives = document.querySelectorAll('[data-dnf-redeem-native]');
+        for (let i = 0; i < natives.length; i++) unmarkHidden(natives[i], 'data-dnf-redeem-native');
+        const wbs = document.querySelectorAll('[data-dnf-wb-hidden]');
+        for (let i = 0; i < wbs.length; i++) unmarkHidden(wbs[i], 'data-dnf-wb-hidden');
+    }
+
     function applyGameUiTweaks() {
         if (!document.body) return;
+        // 桌面端：保证完全回到游戏原样（幂等，重复调用无副作用）
+        if (!isMobileGameLayout()) {
+            revertGameUiTweaks();
+            return;
+        }
         const redeem = findGameButton('兑换码');
         if (!redeem || redeem.hasAttribute('data-dnf-redeem-clone')) return;
         try { hideDuplicateWorldBoss(redeem); } catch (_) { }
         try { relocateRedeemButton(redeem); } catch (_) { }
     }
+
+    /** 视口变化（缩放窗口 / 横竖屏）即时重算，避免残留在错的一侧 */
+    function initGameUiTweakWatchers() {
+        if (window.__dnfUiTweakWatchers585) return;
+        window.__dnfUiTweakWatchers585 = true;
+        const onChange = () => { try { applyGameUiTweaks(); } catch (_) { } };
+        window.addEventListener('resize', onChange, { passive: true });
+        window.addEventListener('orientationchange', () => {
+            setTimeout(onChange, 120);
+            setTimeout(onChange, 500);
+        }, { passive: true });
+        try {
+            const mq = window.matchMedia('(max-width: ' + UI_MOBILE_MAX_WIDTH + 'px)');
+            if (mq.addEventListener) mq.addEventListener('change', onChange);
+            else if (mq.addListener) mq.addListener(onChange);
+        } catch (_) { }
+    }
+
     function start() {
         // 防止脚本被重复注入（Tampermonkey 更新 / SPA 重载）后出现多套定时器
         if (window.__dnfHelperStarted) return;
@@ -4691,7 +4744,9 @@
         // v5.81：启动后延迟 8s 静默检查更新（只提示不执行；设置面板可关闭）
         scheduleUpdateCheck();
 
-        // v5.83：世界BOSS 去重 + 兑换码迁到商店（纯展示层，不发请求）
+        // v5.85：世界BOSS 去重 + 兑换码迁到商店，仅移动端（≤760px）生效；
+        // 桌面端保持游戏原样，窗口缩放/横竖屏会即时回退或重新生效
+        initGameUiTweakWatchers();
         applyGameUiTweaks();
 
         // 1. 扫描分层，避免背包/装备列表渲染风暴拖慢加载：
