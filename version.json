@@ -1,1 +1,1 @@
-{"version":"5.88","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"移动端顶栏兑换码始终隐藏（商店子标签克隆照旧）；手动分解后按服务端 outputs 提示实际所得。"}
+{"version":"5.89","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"头部更新地址从 jsDelivr 改到 gh-proxy（jsDelivr @main 带 7 天浏览器缓存，手机容易卡在旧版本）；功能无改动。"}
