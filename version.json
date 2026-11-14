@@ -1,1 +1,1 @@
-{"version":"5.87","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"图鉴新增宝珠页：/api/orbs 全量 161 条，属性类型/可附魔部位/稀有度三级筛选，图标按 id 补齐并本地缓存。"}
+{"version":"5.88","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"移动端顶栏兑换码始终隐藏（商店子标签克隆照旧）；手动分解后按服务端 outputs 提示实际所得。"}
