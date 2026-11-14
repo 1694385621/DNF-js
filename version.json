@@ -1,1 +1,1 @@
-{"version":"5.89","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"头部更新地址从 jsDelivr 改到 gh-proxy（jsDelivr @main 带 7 天浏览器缓存，手机容易卡在旧版本）；功能无改动。"}
+{"version":"5.92","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"仅调整分解确认：装备详情「分解」走游戏原生路径时不再额外弹插件确认，只保留游戏自身那一次；降级单件接口仍由插件确认。稀有度判定、锁定/红字/已穿戴置灰、选中备份与还原、分解所得提示、请求期禁用与节流均不变。其余功能与 5.91 一致。"}
