@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      5.89
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）。
+// @version      5.92
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色资料（每行插件图标，点击才拉一次 profile，装备/技能/被动三页；同职业同成长方向可一键复制加点，两段式归零→逐级升级，结束对账）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -243,7 +243,24 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '5.89';
+    const VERSION = '5.92';
+
+    /**
+     * 游戏接口 GET 统一超时（v5.90）
+     * ------------------------------------------------------------
+     * 原来 /api/orbs、/api/items/{id} 这些请求没有超时，网络挂起时会让
+     * 「宝珠加载中 / 图标补齐中」永久卡住且无法重试。这里统一 10s 中断，
+     * 调用方只需在 finally 里复位 loading/running 状态即可再次重试。
+     */
+    const API_TIMEOUT_MS = 10000;
+    function apiFetch(url, init) {
+        if (typeof AbortController !== 'function') return fetch(url, init);
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => { try { ctrl.abort(); } catch (_) { } }, API_TIMEOUT_MS);
+        const opts = Object.assign({}, init || {});
+        opts.signal = ctrl.signal;
+        return fetch(url, opts).finally(() => clearTimeout(timer));
+    }
 
     /**
      * 可持久化的用户设置白名单（只存这些，其它运行期配置不写盘）。
@@ -997,7 +1014,45 @@
      *   - 插件自身的 showTip 不受影响，所以存仓/全开等提示不会与同步重复。
      * ============================================================ */
     const GAME_ERROR_DEDUPE_MS = 2500;
-    let gameErrorObserver = null;
+    /* v5.90：统一 DOM 变更总线（红字同步 + 怪物血条共用同一个观察者）
+       ------------------------------------------------------------
+       此前「红字」和「怪物血条」各挂一个 document 级 observer，且都带 characterData，
+       同一批 DOM 变更会被完整遍历两次。合并成一个后只遍历一次：
+         · 红字：任意变更都可能原地改字，保持原有 120ms 合批 + 2.5s 同文案去重；
+         · 怪物血条：只在「地图怪物框」(.panel.dungeon) 内部有变更时才重算，
+           其它区域（HUD/日志/背包）的变更不再触发血条同步。
+       保留 characterData 是因为红字与 HP 文本都是原地改文本节点。 */
+    let _domBusObserver = null;
+    let _domBusHpHooked = false;
+    let _dungeonPanelEl = null;
+
+    function refreshDungeonPanelEl() {
+        _dungeonPanelEl = document.querySelector('.main .panel.dungeon');
+    }
+
+    function initDomBus() {
+        if (_domBusObserver) return;
+        let errorScheduled = false;
+        _domBusObserver = new MutationObserver(records => {
+            if (!errorScheduled) {
+                errorScheduled = true;
+                setTimeout(() => { errorScheduled = false; syncGameError(); }, 120);
+            }
+            if (!_domBusHpHooked) return;
+            if (!_dungeonPanelEl || !_dungeonPanelEl.isConnected) refreshDungeonPanelEl();
+            if (!_dungeonPanelEl) return;
+            for (let i = 0; i < records.length; i++) {
+                const t = records[i].target;
+                if (t && _dungeonPanelEl.contains(t)) { scheduleMonsterHpSync(); return; }
+            }
+        });
+        _domBusObserver.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+        });
+        refreshDungeonPanelEl();
+    }
     let lastGameError = { text: '', at: 0 };
     // 记录每个 .error 节点上次同步过的文本：文本不变就不再弹
     const mirroredErrorNodes = new WeakMap();
@@ -1032,22 +1087,12 @@
         }
     }
 
-    /** 启动红字监听（body/documentElement 可能在 document-start 阶段尚未就绪，用 documentElement 兜底） */
+    /** 启动红字监听（v5.90：改为共用 DOM 变更总线，不再单挂 observer） */
     function startGameErrorSync() {
-        if (gameErrorObserver) return;
-        let scheduled = false;
-        const schedule = () => {
-            if (scheduled) return;
-            scheduled = true;
-            setTimeout(() => { scheduled = false; syncGameError(); }, 120);
-        };
-        gameErrorObserver = new MutationObserver(schedule);
-        gameErrorObserver.observe(document.documentElement, {
-            childList: true,
-            subtree: true,
-            characterData: true,
-        });
-        schedule();   // 注入脚本时若红字已经在页面上，也能补同步一次
+        if (window.__dnfDomBus590) return;
+        window.__dnfDomBus590 = true;
+        initDomBus();
+        syncGameError();   // 注入脚本时若红字已经在页面上，也能补同步一次
     }
 
     /* ============================================================
@@ -2467,6 +2512,69 @@
                 'margin-top:2px;color:#c8b593}',
             '.dnf-deposit-box .dnf-deposit-msg.is-ok{color:#8ee6a0}',
             '.dnf-deposit-box .dnf-deposit-msg.is-err{color:#ff9a9a}',
+            // ===== 物品详情「分解」按钮（v5.91）=====
+            // 与「存仓」同一行，只加插件自己的按钮，不动游戏原生按钮
+            '.dnf-deposit-box .dnf-decompose-btn{border-color:#a65a2a;color:#ffd0a6}',
+            '.dnf-deposit-box .dnf-decompose-btn[disabled]{opacity:.55;cursor:not-allowed}',
+            // ===== 排行榜角色资料 / 复制加点面板（v5.91）=====
+            '.dnf-rank-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;' +
+                'margin-left:4px;padding:0;border-radius:4px;border:1px solid #9b7645;background:#2a2118;' +
+                'color:#ffd794;font:11px/1 Microsoft YaHei,sans-serif;cursor:pointer;vertical-align:middle}',
+            '.dnf-rank-btn:hover{background:#3a2c1d}',
+            '.dnf-rp-mask{position:fixed;inset:0;z-index:1000003;display:flex;align-items:center;' +
+                'justify-content:center;padding:12px;background:#0008}',
+            '.dnf-rp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 24px));' +
+                'max-height:calc(100vh - 24px);box-sizing:border-box;overflow:hidden;border-radius:12px;' +
+                'border:1px solid #9b7645;background:#211a13;color:#edddc3;box-shadow:0 12px 36px #0009;' +
+                'font:13px/1.5 Microsoft YaHei,sans-serif;overflow-wrap:anywhere;word-break:break-word}',
+            '.dnf-rp-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;' +
+                'flex:0 0 auto;padding:10px 14px;background:#302319;border-bottom:1px solid #80613e}',
+            '.dnf-rp-title{color:#ffd794;font-size:15px;font-weight:700;line-height:1.3}',
+            '.dnf-rp-sub{color:#baa78e;font-size:12px;line-height:1.4}',
+            '.dnf-rp-x{flex:0 0 auto;min-width:30px;min-height:30px;background:none;border:0;color:#dfc79e;' +
+                'font-size:22px;line-height:1;cursor:pointer}',
+            '.dnf-rp-x[disabled]{opacity:.4;cursor:not-allowed}',
+            '.dnf-rp-tabs{display:flex;gap:6px;flex:0 0 auto;padding:8px 14px 0}',
+            '.dnf-rp-tab{min-height:30px;padding:0 12px;border-radius:6px 6px 0 0;cursor:pointer;' +
+                'border:1px solid #6b5633;border-bottom:0;background:#2a2118;color:#c8b593;' +
+                'font:12px/1 Microsoft YaHei,sans-serif}',
+            '.dnf-rp-tab.active{background:#3a2c1d;color:#ffd794;border-color:#9b7645}',
+            '.dnf-rp-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:10px 14px;' +
+                'overscroll-behavior:contain}',
+            '.dnf-rp-group{margin-bottom:8px}',
+            '.dnf-rp-group-title{color:#baa78e;font-size:12px;margin:6px 0 4px}',
+            '.dnf-rp-row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;' +
+                'border:1px solid #3f3123;background:#261e15;margin-bottom:4px;min-width:0}',
+            '.dnf-rp-row.dim{opacity:.45}',
+            '.dnf-rp-ico{width:26px;height:26px;flex:0 0 auto;border-radius:4px;object-fit:contain;' +
+                'background:#1a130c;border:1px solid #4b3a26}',
+            '.dnf-rp-slot{flex:0 0 52px;color:#baa78e;font-size:12px}',
+            '.dnf-rp-name{flex:1 1 auto;min-width:0;color:#f0e7d2}',
+            '.dnf-rp-meta{flex:0 0 auto;color:#ffd794;font-size:12px;white-space:nowrap}',
+            '.dnf-rp-tag{flex:0 0 auto;font-size:11px;padding:0 4px;border-radius:3px;' +
+                'border:1px solid #9b7645;color:#ffd794}',
+            '.dnf-rp-empty{color:#baa78e;font-size:12px;padding:8px 2px}',
+            '.dnf-rp-foot{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;' +
+                'padding:10px 14px;border-top:1px solid #56422f;background:#241b12;flex-wrap:wrap}',
+            '.dnf-rp-hint{color:#baa78e;font-size:12px}',
+            '.dnf-rp-btn{min-width:96px;min-height:34px;padding:0 14px;border-radius:6px;cursor:pointer;' +
+                'font:700 13px/1 Microsoft YaHei,sans-serif;border:1px solid #8f6d3f;background:#2a2118;color:#e6d3b3}',
+            '.dnf-rp-btn.primary{border-color:#c7751a;background:linear-gradient(180deg,#f0a23d,#d47e1c);color:#1a1206}',
+            '.dnf-rp-btn[disabled]{opacity:.55;cursor:not-allowed}',
+            '.dnf-cp-sec{margin-bottom:10px}',
+            '.dnf-cp-sec-title{color:#ffd794;font-weight:700;margin-bottom:4px}',
+            '.dnf-cp-list{margin:0;padding-left:18px;color:#e6d3b3;font-size:12px;line-height:1.55}',
+            '.dnf-cp-warn{color:#ff8f8f;font-weight:700;font-size:12px;line-height:1.5;margin:6px 0}',
+            '.dnf-cp-tip{color:#ffd794;font-size:12px;line-height:1.5;margin:4px 0}',
+            '.dnf-cp-opt{display:flex;align-items:center;gap:8px;font-size:12px;color:#e6d3b3;margin:8px 0}',
+            '.dnf-cp-opt input{width:16px;height:16px}',
+            '.dnf-cp-log{max-height:180px;overflow-y:auto;border:1px solid #3f3123;border-radius:6px;' +
+                'background:#1a130c;padding:6px 8px;font:12px/1.5 Consolas,Microsoft YaHei,monospace;' +
+                'color:#c8b593;white-space:pre-wrap}',
+            '.dnf-cp-log .ok{color:#8ee6a0}',
+            '.dnf-cp-log .err{color:#ff9a9a}',
+            '.dnf-cp-log .warn{color:#ffd794}',
+            '.dnf-cp-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:8px}',
             // ===== 仓库装备详情「确认取出」浮层（v5.77）=====
             // 只给插件自己新增的节点上样式，不动游戏原生按钮
             '.dnf-withdraw-box{flex:1 1 100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;' +
@@ -2613,11 +2721,11 @@
         if (window.__dnfHpPrecision580) return;
         window.__dnfHpPrecision580 = true;
         syncMonsterHpFills();
-        try {
-            // 只观察文本/节点变化，不观察 attributes，避免自己写 style 造成死循环
-            const obs = new MutationObserver(scheduleMonsterHpSync);
-            obs.observe(document.body, { childList: true, subtree: true, characterData: true });
-        } catch (_) { }
+        // v5.90：不再单独观察 document.body（与红字观察者重复遍历），
+        // 改为挂到统一 DOM 变更总线上，且只在「地图怪物框」内变化时才重算。
+        _domBusHpHooked = true;
+        refreshDungeonPanelEl();
+        initDomBus();
         // 兜底：同一文本节点被原地替换时 MutationObserver 可能不漏事件，1s 再同步一次
         setInterval(scheduleMonsterHpSync, 1000);
     }
@@ -2917,6 +3025,8 @@
      *     切换物品或弹窗关闭后标记失效，自动重建/销毁。
      * ============================================================ */
     let _depositBusy = false;
+    /* v5.91：详情页「分解」按钮的请求节流，避免连点并发 */
+    let _decomposeBusy = false;
 
     function depositDisabledReason(store, item) {
         if (!item) return '没有可存入的物品';
@@ -2993,7 +3103,7 @@
     }
 
     async function depositDetailItem(store, box) {
-        if (_depositBusy) return;
+        if (_depositBusy || _decomposeBusy) return;
         if (!store.detailItem) return;
         const item = store.detailItem.value;
         if (!item) return;
@@ -3056,6 +3166,10 @@
         }
     }
 
+    /* v5.90：注入框改为模块级引用，清理时用 isConnected 短路，
+       不再每秒全文档查 [data-dnf-deposit-box]。 */
+    let _depositBoxEl = null;
+
     function applyDetailDepositButton() {
         const store = getGameStore();
         let mask = null;
@@ -3074,10 +3188,11 @@
             }
         }
 
-        // 弹窗关闭或切换到别的弹窗：清掉所有残留注入框
-        document.querySelectorAll('[data-dnf-deposit-box]').forEach(box => {
-            if (!mask || !mask.contains(box)) box.remove();
-        });
+        // 弹窗关闭或切换到别的弹窗：清掉残留注入框（v5.90：只查模块级引用，不全文档扫描）
+        if (_depositBoxEl && (!_depositBoxEl.isConnected || !mask || !mask.contains(_depositBoxEl))) {
+            _depositBoxEl.remove();
+            _depositBoxEl = null;
+        }
 
         if (!mask || !actions || !item) return;
         if (!store.tab || store.tab.value !== 'bag') return;
@@ -3098,6 +3213,7 @@
         box.className = 'dnf-deposit-box';
         box.setAttribute('data-dnf-deposit-box', '1');
         box.dataset.depositKey = key;
+        _depositBoxEl = box;
 
         // 材料可堆叠时给数量输入：默认整组，可改，上限=持有数
         if (item.kind !== 'equipment' && Number(item.count) > 1) {
@@ -3142,8 +3258,189 @@
             e.stopPropagation();
             depositDetailItem(store, box);
         });
-        box.append(btn, msg);
+        box.append(btn);
+        // v5.91：背包装备详情在「存仓」右侧加「分解」（与存仓同一行）
+        if (sub === 'equip' && item.kind === 'equipment') {
+            box.append(createDecomposeButton(store, box, item));
+        }
+        box.append(msg);
         actions.appendChild(box);
+    }
+
+    /* ============================================================
+     * 背包装备详情「分解」按钮（v5.91）
+     *
+     * 落点：复用「存仓」注入框（data-dnf-deposit-box），按钮排在存仓右侧同一行。
+     * 主路径（默认）：备份当前背包选中 → 暂时只选中目标装备 → 调游戏原生
+     *   store.decomposeBagSelection() → finally 还原原选中。
+     *   确认框、原生 toast、背包/材料刷新、busy 全部交给游戏自己。
+     * 降级：拿不到原生分解方法（或目标不在当前背包视图）时，改走
+     *   POST /api/characters/{id}/decompose { instance_id }，自弹 confirm，
+     *   成功后复用 v5.88 的分解所得提示并刷新背包。
+     * 安全：
+     *   - 原生路径只保留游戏自身那一次确认，插件不再重复询问；
+     *   - 降级路径（无原生确认兜底）仍由插件弹一次确认；
+     *   - 锁定 / 红字（cursed）/ 已穿戴 / 非装备 / 不在背包 → 置灰并说明原因；
+     *   - 请求期间禁用按钮并节流，避免连点并发。
+     * ============================================================ */
+    const RARITY_NAMES = ['普通', '高级', '稀有', '神器', '史诗', '勇者', '传说'];
+
+    function rarityNameOf(rarity) {
+        const n = Number(rarity);
+        return Number.isFinite(n) && RARITY_NAMES[n] ? RARITY_NAMES[n] : '';
+    }
+
+    function decomposeDisabledReason(store, item) {
+        if (!item) return '没有可分解的装备';
+        if (item.kind !== 'equipment') return '只有装备可以分解';
+        if (item.locked) return '装备已锁定，请先解锁';
+        if (item.cursed) return '红字（被诅咒）装备无法分解';
+        const slot = store.detailEquippedSlot ? store.detailEquippedSlot.value : '';
+        if (slot) return '已穿戴，请先卸下再分解';
+        if (store.detailInInventory && !store.detailInInventory.value) return '物品不在背包中，无法分解';
+        if (!(Number(item.instance_id) > 0)) return '该装备没有实例编号，无法分解';
+        return '';
+    }
+
+    function bagSelectKey(x) {
+        if (!x) return '';
+        return Number(x.instance_id) > 0 ? 'e' + Number(x.instance_id) : 's' + x.item_id;
+    }
+
+    /** 当前背包选中项（只读快照；bagSelectedItems 是 computed，不能直接赋值） */
+    function currentBagSelection(store) {
+        try {
+            const v = store.bagSelectedItems ? store.bagSelectedItems.value : null;
+            return Array.isArray(v) ? v.slice() : [];
+        } catch (_) { return []; }
+    }
+
+    function itemInBagView(store, item) {
+        const key = bagSelectKey(item);
+        try {
+            const list = store.bagViewItems ? store.bagViewItems.value : null;
+            return Array.isArray(list) ? list.some(x => bagSelectKey(x) === key) : false;
+        } catch (_) { return false; }
+    }
+
+    function canUseNativeDecompose(store, item) {
+        return !!(store && typeof store.decomposeBagSelection === 'function'
+            && typeof store.toggleBagItemSelect === 'function'
+            && store.bagSelectedItems && store.bagViewItems
+            && itemInBagView(store, item));
+    }
+
+    function createDecomposeButton(store, box, item) {
+        const reason = decomposeDisabledReason(store, item);
+        const rn = rarityNameOf(item.rarity);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'da-btn dnf-deposit-btn dnf-decompose-btn';
+        btn.textContent = '分解';
+        if (reason) {
+            btn.disabled = true;
+            btn.title = '无法分解：' + reason;
+        } else {
+            btn.title = '分解这件装备' + (rn ? '（' + rn + '）' : '');
+        }
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            decomposeDetailItem(store, box, item, btn);
+        });
+        return btn;
+    }
+
+    /** 原生分解：只让目标装备处于选中态，结束后还原用户原选中 */
+    async function decomposeViaStore(store, box, item) {
+        const inst = Number(item.instance_id) || 0;
+        const before = currentBagSelection(store);
+        const targetKey = bagSelectKey(item);
+
+        // 先清空已有选中，避免把用户之前勾选的其它装备一起分解
+        for (const x of before) {
+            try { store.toggleBagItemSelect(x); } catch (_) { }
+        }
+        try { store.toggleBagItemSelect(item); } catch (_) { }
+        try {
+            await store.decomposeBagSelection();
+        } finally {
+            // 清掉残留（含目标），再还原原选中；目标已被分解则不再还原
+            for (const x of currentBagSelection(store)) {
+                try { store.toggleBagItemSelect(x); } catch (_) { }
+            }
+            const visible = store.bagViewItems ? store.bagViewItems.value : null;
+            for (const x of before) {
+                const k = bagSelectKey(x);
+                if (k === targetKey) continue;
+                if (Array.isArray(visible) && !visible.some(v => bagSelectKey(v) === k)) continue;
+                try { store.toggleBagItemSelect(x); } catch (_) { }
+            }
+        }
+
+        // 结果判定：分解成功则目标已从背包消失；取消确认/失败时仍在
+        let still = null;
+        try {
+            const inv = store.inventory ? store.inventory.value : null;
+            if (Array.isArray(inv)) still = inv.some(x => Number(x.instance_id) === inst);
+        } catch (_) { }
+        if (still === false) {
+            if (store.detailItem) store.detailItem.value = null;
+            return true;
+        }
+        if (still === true) {
+            const err = store.error ? store.error.value : '';
+            if (err) setDepositMsg(box, String(err), true);
+        }
+        return false;
+    }
+
+    /** 降级：单件分解接口（自弹确认） */
+    async function decomposeViaApi(store, box, item) {
+        const rn = rarityNameOf(item.rarity);
+        const label = '「' + (item.name || '装备') + '」' + (rn ? '（' + rn + '）' : '');
+        const ok = window.confirm('确认分解' + label + '？分解后无法恢复。');
+        if (!ok) return false;
+        const data = await postCharacterApi(store, 'decompose',
+            { instance_id: Number(item.instance_id) }, 12000, '分解失败');
+        if (store.detailItem) store.detailItem.value = null;
+        if (data && Array.isArray(data.outputs) && data.outputs.length) {
+            await showDecomposeGain(data.outputs);
+        } else {
+            showTip('已分解：' + (item.name || '装备'));
+        }
+        try {
+            const tasks = [];
+            if (typeof store.loadInventory === 'function') tasks.push(store.loadInventory());
+            if (tasks.length) await Promise.all(tasks);
+        } catch (_) { }
+        return true;
+    }
+
+    async function decomposeDetailItem(store, box, item, btn) {
+        if (_decomposeBusy || _depositBusy) return;
+        const reason = decomposeDisabledReason(store, item);
+        if (reason) { setDepositMsg(box, reason, true); return; }
+
+        _decomposeBusy = true;
+        btn.disabled = true;
+        btn.textContent = '分解中…';
+        setDepositMsg(box, '', false);
+        try {
+            if (canUseNativeDecompose(store, item)) {
+                await decomposeViaStore(store, box, item);
+            } else {
+                await decomposeViaApi(store, box, item);
+            }
+        } catch (err) {
+            setDepositMsg(box, (err && err.message) ? err.message : '分解失败，请稍后重试', true);
+        } finally {
+            _decomposeBusy = false;
+            if (btn.isConnected) {
+                btn.textContent = '分解';
+                btn.disabled = !!decomposeDisabledReason(store, item);
+            }
+        }
     }
 
     /* ============================================================
@@ -3327,6 +3624,9 @@
         }
     }
 
+    /* v5.90：同上，仓库取出浮层用模块级引用清理 */
+    let _whWithdrawBoxEl = null;
+
     /** 详情弹窗底部维护「确认取出 / 取消」浮层（只加自己的节点） */
     function applyWarehouseWithdrawBox() {
         const store = getGameStore();
@@ -3337,10 +3637,11 @@
         const isWarehouseItem = !!(inst && wh && Array.isArray(wh.equipment) &&
             wh.equipment.some(x => Number(x.instance_id) === inst));
 
-        // 弹窗关闭 / 切到背包物品：清掉插件浮层
-        document.querySelectorAll('[data-dnf-wh-withdraw]').forEach(box => {
-            if (!isWarehouseItem || !panel || !panel.contains(box)) box.remove();
-        });
+        // 弹窗关闭 / 切到背包物品：清掉插件浮层（v5.90：只查模块级引用）
+        if (_whWithdrawBoxEl && (!_whWithdrawBoxEl.isConnected || !isWarehouseItem || !panel || !panel.contains(_whWithdrawBoxEl))) {
+            _whWithdrawBoxEl.remove();
+            _whWithdrawBoxEl = null;
+        }
         if (!isWarehouseItem || !panel) return;
 
         const reason = withdrawDisabledReason(store, detail);
@@ -3358,6 +3659,7 @@
         box.className = 'dnf-withdraw-box';
         box.setAttribute('data-dnf-wh-withdraw', '1');
         box.dataset.whKey = key;
+        _whWithdrawBoxEl = box;
 
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -3783,11 +4085,15 @@
         }
     }
 
+    /* v5.90：秘宝盒「全开」按钮头用模块级引用清理 */
+    let _clearboxHeadEl = null;
+
     function applyClearBoxAllButton() {
-        // 清理不在秘宝盒面板里的残留按钮（面板被移除时整块会一起销毁）
-        document.querySelectorAll('.dnf-clearbox-head').forEach(head => {
-            if (!head.closest('.clearbox-panel')) head.remove();
-        });
+        // 清理不在秘宝盒面板里的残留按钮（v5.90：只查模块级引用，不全文档扫描）
+        if (_clearboxHeadEl && (!_clearboxHeadEl.isConnected || !_clearboxHeadEl.closest('.clearbox-panel'))) {
+            _clearboxHeadEl.remove();
+            _clearboxHeadEl = null;
+        }
 
         const panel = document.querySelector('.bag-tab > .clearbox-panel') ||
             document.querySelector('.clearbox-panel');
@@ -3797,6 +4103,7 @@
         if (!head) {
             head = document.createElement('div');
             head.className = 'dnf-clearbox-head';
+            _clearboxHeadEl = head;
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'sm dnf-clearbox-all';
@@ -3809,6 +4116,7 @@
             head.appendChild(btn);
             panel.insertBefore(head, panel.firstChild);
         }
+        _clearboxHeadEl = head;
         setClearBoxButtonState(head.querySelector('.dnf-clearbox-all'));
     }
 
@@ -3976,6 +4284,13 @@
         if (!barTargetsCache.length || now - barTargetsScanAt > CONFIG.hpBarFallbackScanMs) {
             barTargetsScanAt = now;
             barTargetsCache = [];
+            // v5.90：同一父节点的矩形只量一次，避免循环内反复强制同步布局
+            const rectCache = new Map();
+            const rectOf = node => {
+                let r = rectCache.get(node);
+                if (!r) { r = node.getBoundingClientRect(); rectCache.set(node, r); }
+                return r;
+            };
             for (const el of document.querySelectorAll('span,div,b,i,em,strong')) {
                 if (el.classList && (el.classList.contains('dnf-bar-ov') || el.classList.contains('bar-label'))) continue;
                 if (el.children.length > 1) continue;
@@ -3986,7 +4301,7 @@
                 let node = el.parentElement;
                 let container = null;
                 for (let i = 0; i < 3 && node && node !== document.body; i++) {
-                    const r = node.getBoundingClientRect();
+                    const r = rectOf(node);
                     if (r.height > 4 && r.height <= 44 && r.width >= 80 && node.children.length >= 2) {
                         container = node;
                         break;
@@ -4066,16 +4381,26 @@
     }
 
     /* ============================================================
-     * 扫描调度（模块级：角色软重置时也能调用，避免作用域引用错误）
-     *  - runScans（全量）：1s 轮询；含死亡/登录/结算等检测
-     *  - runLightScans（轻量）：DOM 变化时执行，只做纯 DOM 维护
+     * 扫描调度（模块级唯一入口：角色软重置、1s 轮询、DOM 变更都走这里）
+     *  - runLightScans（轻量）：只做纯 DOM 维护，不读取页面文本
+     *  - runScans（全量）：轻量 + 死亡/登录/结算等文本检测
+     * v5.90：删掉了 start() 内重复定义的一套，避免两处逻辑漂移；
+     *        角色切换重置时也能把 4 处 UI 修正一起补上。
      * ============================================================ */
-    function runScans() {
+    function runLightScans() {
         relocateTabsAfterSettlement();
         applyModuleOrder();
         applyHideUnlearnedSkills();
         applyUiTheme();
         applyGameAssistantVisibility();
+        applyGameUiTweaks();
+        applyDetailDepositButton();
+        applyRankProfileIcons();
+        applyWarehouseWithdrawBox();
+        applyClearBoxAllButton();
+    }
+    function runScans() {
+        runLightScans();
         if (CONFIG.enableReviveHud) {
             checkLoginAndReset();
             scanSettlement();
@@ -4083,13 +4408,6 @@
             scanLevelExp();
             scanAssistStats();
         }
-    }
-    function runLightScans() {
-        relocateTabsAfterSettlement();
-        applyModuleOrder();
-        applyHideUnlearnedSkills();
-        applyUiTheme();
-        applyGameAssistantVisibility();
     }
 
     /* ============================================================
@@ -4692,18 +5010,27 @@
         if (!todo.length) return;
         orbIconsRunning = true;
         try {
-            let n = 0;
-            for (const o of todo) {
-                try {
-                    const r = await fetch('/api/items/' + o.id, { headers: { Authorization: 'Bearer ' + token } });
-                    if (r.ok) {
-                        const d = await r.json();
-                        o.icon = orbIconUrl(d.icon_path, d.icon_index);
-                    }
-                } catch (_) { }
-                n++;
-                if (n % 20 === 0) { writeOrbCache(); if (atlasMode === 'orb' && !state.detail) renderOrbList(); }
-                await orbSleep(ORB_ICON_GAP_MS);
+            // v5.90：小并发（4）+ 单请求 10s 超时；失败项保持空图标，下次打开再补。
+            // 批与批之间留 120ms 间隔，避免对游戏接口形成并发风暴。
+            const ROUND_SIZE = 4;
+            let done = 0;
+            for (let i = 0; i < todo.length; i += ROUND_SIZE) {
+                const batch = todo.slice(i, i + ROUND_SIZE);
+                await Promise.all(batch.map(async o => {
+                    try {
+                        const r = await apiFetch('/api/items/' + o.id, { headers: { Authorization: 'Bearer ' + token } });
+                        if (r.ok) {
+                            const d = await r.json();
+                            o.icon = orbIconUrl(d.icon_path, d.icon_index);
+                        }
+                    } catch (_) { }
+                }));
+                done += batch.length;
+                if (done % 20 === 0 || done >= todo.length) {
+                    writeOrbCache();
+                    if (atlasMode === 'orb' && !state.detail) renderOrbList();
+                }
+                if (i + ROUND_SIZE < todo.length) await orbSleep(ORB_ICON_GAP_MS * 2);
             }
             writeOrbCache();
         } finally {
@@ -4734,7 +5061,7 @@
         orbState = { loading: true, error: '' };
         renderOrbList();
         try {
-            const r = await fetch('/api/orbs', { headers: { Authorization: 'Bearer ' + token } });
+            const r = await apiFetch('/api/orbs', { headers: { Authorization: 'Bearer ' + token } });
             if (!r.ok) throw new Error('接口返回 HTTP ' + r.status);
             const j = await r.json();
             const rows = j && Array.isArray(j.orbs) ? j.orbs : [];
@@ -5034,8 +5361,14 @@
         }
     }
 
+    /* v5.90：记录是否真的注入过移动端改动。桌面端每秒调 applyGameUiTweaks 时
+       若从未注入过，就直接返回，不再每次全文档查三个 data-* 属性。 */
+    let _gameUiTweaksApplied = false;
+
     /** 撤回全部改动：删克隆、还原被隐藏的原生按钮（桌面端 / 切回桌面宽度时调用） */
     function revertGameUiTweaks() {
+        if (!_gameUiTweaksApplied) return;
+        _gameUiTweaksApplied = false;
         const clones = document.querySelectorAll('[data-dnf-redeem-clone]');
         for (let i = 0; i < clones.length; i++) clones[i].remove();
         _redeemCloneEl = null;
@@ -5056,6 +5389,7 @@
         if (!redeem || redeem.hasAttribute('data-dnf-redeem-clone')) return;
         try { hideDuplicateWorldBoss(redeem); } catch (_) { }
         try { relocateRedeemButton(redeem); } catch (_) { }
+        _gameUiTweaksApplied = true;
     }
 
     /** 视口变化（缩放窗口 / 横竖屏）即时重算，避免残留在错的一侧 */
@@ -5107,7 +5441,7 @@
         const token = decompToken();
         if (!token) return '物品 ' + itemId;
         try {
-            const r = await fetch('/api/items/' + itemId, { headers: { Authorization: 'Bearer ' + token } });
+            const r = await apiFetch('/api/items/' + itemId, { headers: { Authorization: 'Bearer ' + token } });
             if (r.ok) {
                 const d = await r.json();
                 if (d && d.name) { cache[itemId] = d.name; saveDecompNames(); return d.name; }
@@ -5181,6 +5515,840 @@
         };
     }
 
+    /* ============================================================
+     * 排行榜「查看资料 / 复制加点」（v5.91）
+     *
+     * 入口：排行榜每行角色名旁一个插件小图标；点击时才请求
+     *   GET /api/characters/{id}/profile （一次点击只拉一次，禁止批量遍历榜单）。
+     * 面板：装备 / 技能 / 被动 三页。
+     * 复制门槛：对方 character.job 与 grow_type 都与我方相同才显示「复制加点」。
+     *
+     * 复制流程（两段式）：
+     *   阶段 0：拉双方数据 → 分「需降 / 需升 / 一致」，主动/被动分开；
+     *           按归零返还与重学消耗分别算 SP/TP，给出够/不够与部分复制预演。
+     *   一次总确认：对方信息、归零清单（含返还）、升级清单（含消耗）、
+     *           合计与净变化、不可逆提示、0 级期间战力下降红字警告，
+     *           勾选项「同时复制技能栏」（默认关）。
+     *   阶段 1：按当前投入从大到小逐个 POST skill-reset-one，每项间隔 250ms，
+     *           实时显示「已归零 k/N：名称 · 返还 SP +x」。
+     *   阶段 2：被动优先、主动按 req_level 升序；目标 == max_level 先
+     *           skill-upgrade-max 一次到位，否则逐级 skill-upgrade；
+     *           TP 被动逐级 tp-learn；每级间隔 250ms；不足即停。
+     *   收尾：GET /skills 对账，逐项输出「目标 / 实际 / 差额」+ 未完成项。
+     *   技能栏：操作前快照自己的 skill-loadout；仅勾选时最后覆盖写入，
+     *           未勾选但检测到被重置影响时用快照写回一次。
+     * 失败：阶段一「继续 / 直接进入加点 / 中止」，阶段二「继续 / 停止并展示落差」；
+     *       不自动回退、不自动重试。
+     * ============================================================ */
+    const SKILL_KIND_LABELS = { buff: '增益', bullet: '属性弹', summon: '召唤', stance: '姿态', active: '输出' };
+    const SKILL_KIND_ORDER = ['buff', 'bullet', 'summon', 'stance', 'active'];
+    const EQUIP_SLOT_LABELS = {
+        weapon: '武器', coat: '上衣', pants: '下装', shoulder: '头肩', shoes: '鞋子', belt: '腰带',
+        wrist: '手镯', amulet: '项链', ring: '戒指', magicstone: '魔法石', support: '辅助装备', subweapon: '副武器'
+    };
+    const EQUIP_SLOT_ORDER = ['weapon', 'coat', 'pants', 'shoulder', 'shoes', 'belt',
+        'wrist', 'amulet', 'ring', 'magicstone', 'support', 'subweapon'];
+    const SKILL_ACTION_GAP_MS = 250;
+
+    let _rankPanelEl = null;
+    let _copyPanelEl = null;
+    let _copyBusy = false;
+    let _copyTriggerBtn = null;
+
+    function uiEl(tag, cls, text) {
+        const el = document.createElement(tag);
+        if (cls) el.className = cls;
+        if (text != null) el.textContent = String(text);
+        return el;
+    }
+
+    function sleepMs(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function authHeaders() {
+        const token = localStorage.getItem('dnf_idle_token') || '';
+        return token ? { Authorization: 'Bearer ' + token } : {};
+    }
+
+    /** 与游戏一致的图标地址（/assets/icons/...） */
+    function dnfIconUrl(path, index) {
+        if (!path || index === null || index === undefined) return '';
+        let p = String(path).replace(/\\/g, '/').toLowerCase();
+        if (p.endsWith('.img')) p = p.slice(0, -4);
+        return '/assets/icons/' + ('sprite/' + p).replace(/\//g, '_') + '_' + index + '.png';
+    }
+
+    async function fetchJson(url) {
+        const res = await apiFetch(url, { headers: authHeaders() });
+        let data = null;
+        try { data = await res.json(); } catch (_) { }
+        if (!res.ok) {
+            const msg = (data && (data.error || data.message)) || ('请求失败（HTTP ' + res.status + '）');
+            throw new Error(msg);
+        }
+        return data;
+    }
+
+    async function getMyCharApi(store, path) {
+        const charId = store && store.charId ? store.charId.value : null;
+        if (!charId) throw new Error('未找到当前角色，无法读取技能数据');
+        return fetchJson('/api/characters/' + charId + '/' + path);
+    }
+
+    /** 只给排行榜行补图标；点击才请求对方 profile，绝不批量遍历 */
+    function applyRankProfileIcons() {
+        const rows = document.querySelectorAll('.rank-row');
+        if (!rows.length) return;
+        const store = getGameStore();
+        if (!store || !store.character || !store.character.value) return;
+        const rd = store.rankingData ? store.rankingData.value : null;
+        const list = rd && Array.isArray(rd.ranking) ? rd.ranking : null;
+        if (!list || !list.length) return;
+        const me = store.character.value;
+        const meId = Number(me.id) || 0;
+
+        for (const row of rows) {
+            if (row.querySelector('[data-dnf-rank-profile]')) continue;
+            const nameEl = row.querySelector('.rank-name');
+            if (!nameEl) continue;
+            const name = (nameEl.textContent || '').trim();
+            const noEl = row.querySelector('.rank-no');
+            const rank = noEl ? parseInt((noEl.textContent || '').trim(), 10) : NaN;
+            let rec = null;
+            if (Number.isFinite(rank)) rec = list.find(r => Number(r.rank) === rank && r.name === name) || null;
+            if (!rec) rec = list.find(r => r.name === name) || null;
+            if (!rec || !rec.id) continue;
+            const id = Number(rec.id);
+            if (meId && id === meId) continue;
+            const same = rec.job === me.job && rec.grow_type === me.grow_type;
+            const btn = uiEl('button', 'dnf-rank-btn', '◈');
+            btn.type = 'button';
+            btn.setAttribute('data-dnf-rank-profile', String(id));
+            btn.title = '插件：查看装备/技能/被动' + (same ? ' · 可复制加点' : ' · 仅查看（职业/成长方向不同）');
+            btn.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                openRankProfilePanel(id, rec.name);
+            });
+            nameEl.insertAdjacentElement('afterend', btn);
+        }
+    }
+
+    function closeRankProfilePanel() {
+        if (_copyPanelEl) return; // 复制面板还开着时先不关资料面板
+        if (_rankPanelEl) {
+            _rankPanelEl.remove();
+            _rankPanelEl = null;
+        }
+    }
+
+    function openRankProfilePanel(charId, fallbackName) {
+        if (_copyBusy) { showTip('复制加点正在执行，请稍候'); return; }
+        if (_copyPanelEl) closeCopyPanel();
+        if (_rankPanelEl) { _rankPanelEl.remove(); _rankPanelEl = null; }
+
+        const mask = uiEl('div', 'dnf-rp-mask');
+        const panel = uiEl('div', 'dnf-rp-panel');
+        _rankPanelEl = mask;
+        mask.addEventListener('click', (e) => { if (e.target === mask) closeRankProfilePanel(); });
+        panel.addEventListener('click', (e) => e.stopPropagation());
+
+        const head = uiEl('div', 'dnf-rp-head');
+        const left = uiEl('div', '');
+        const title = uiEl('div', 'dnf-rp-title', fallbackName || '角色资料');
+        const sub = uiEl('div', 'dnf-rp-sub', '加载中…');
+        left.append(title, sub);
+        const closeBtn = uiEl('button', 'dnf-rp-x', '×');
+        closeBtn.type = 'button';
+        closeBtn.title = '关闭';
+        closeBtn.addEventListener('click', closeRankProfilePanel);
+        head.append(left, closeBtn);
+
+        const tabs = uiEl('div', 'dnf-rp-tabs');
+        const body = uiEl('div', 'dnf-rp-body', '加载中…');
+        const foot = uiEl('div', 'dnf-rp-foot');
+        panel.append(head, tabs, body, foot);
+        mask.append(panel);
+        document.body.append(mask);
+
+        fetchJson('/api/characters/' + charId + '/profile').then((profile) => {
+            if (_rankPanelEl !== mask) return;
+            renderRankProfile(profile, { title, sub, tabs, body, foot }, fallbackName);
+        }).catch((err) => {
+            if (_rankPanelEl !== mask) return;
+            sub.textContent = '加载失败';
+            body.textContent = '';
+            body.append(uiEl('div', 'dnf-rp-empty', '读取资料失败：' + (err && err.message ? err.message : '未知错误')));
+        });
+    }
+
+    function renderRankProfile(profile, refs, fallbackName) {
+        const ch = (profile && profile.character) || {};
+        const store = getGameStore();
+        const me = store && store.character ? store.character.value : null;
+        const same = !!(me && ch.job && ch.grow_type && ch.job === me.job && ch.grow_type === me.grow_type);
+
+        refs.title.textContent = ch.name || fallbackName || '角色资料';
+        const jobText = ch.job_name || ch.job || '';
+        refs.sub.textContent = 'Lv.' + (ch.level != null ? ch.level : '?') + (jobText ? ' · ' + jobText : '')
+            + ' · 战力 ' + (Number(ch.power) || 0).toLocaleString();
+
+        refs.tabs.textContent = '';
+        refs.body.textContent = '';
+        refs.foot.textContent = '';
+
+        const tabDefs = [['equip', '装备'], ['skill', '技能'], ['passive', '被动']];
+        const tabBtns = new Map();
+        const setTab = (key) => {
+            tabBtns.forEach((b, k) => b.classList.toggle('active', k === key));
+            refs.body.textContent = '';
+            refs.body.scrollTop = 0;
+            if (key === 'equip') renderRankEquip(profile, refs.body);
+            else if (key === 'skill') renderRankSkills(profile, refs.body, false);
+            else renderRankSkills(profile, refs.body, true);
+        };
+        for (const [key, label] of tabDefs) {
+            const b = uiEl('button', 'dnf-rp-tab', label);
+            b.type = 'button';
+            b.addEventListener('click', () => setTab(key));
+            tabBtns.set(key, b);
+            refs.tabs.append(b);
+        }
+
+        if (same) {
+            const copyBtn = uiEl('button', 'dnf-rp-btn primary', '复制加点');
+            copyBtn.type = 'button';
+            copyBtn.title = '把对方技能/被动等级复制到当前角色（两段式，执行前有一次总确认）';
+            copyBtn.addEventListener('click', () => openCopyConfirm(profile, copyBtn));
+            refs.foot.append(uiEl('span', 'dnf-rp-hint', '同职业、同成长方向'), copyBtn);
+        } else {
+            refs.foot.append(uiEl('span', 'dnf-rp-hint', '职业或成长方向不同，仅可查看'));
+        }
+        setTab('equip');
+    }
+
+    function profileIconEl(path, index) {
+        const src = dnfIconUrl(path, index);
+        if (!src) return uiEl('span', 'dnf-rp-ico');
+        const img = document.createElement('img');
+        img.className = 'dnf-rp-ico';
+        img.loading = 'lazy';
+        img.src = src;
+        img.alt = '';
+        img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+        return img;
+    }
+
+    function renderRankEquip(profile, body) {
+        const equipped = Array.isArray(profile && profile.equipped) ? profile.equipped : [];
+        if (!equipped.length) {
+            body.append(uiEl('div', 'dnf-rp-empty', '没有装备数据'));
+            return;
+        }
+        const bySlot = new Map();
+        for (const it of equipped) if (it && it.slot) bySlot.set(it.slot, it);
+        const slots = EQUIP_SLOT_ORDER.slice();
+        for (const it of equipped) if (it && it.slot && slots.indexOf(it.slot) < 0) slots.push(it.slot);
+        for (const slot of slots) {
+            const it = bySlot.get(slot);
+            if (!it) continue;
+            const row = uiEl('div', 'dnf-rp-row');
+            row.append(profileIconEl(it.icon_path, it.icon_index));
+            row.append(uiEl('span', 'dnf-rp-slot', EQUIP_SLOT_LABELS[slot] || slot));
+            row.append(uiEl('span', 'dnf-rp-name', it.name || ''));
+            const plus = Number(it.amplify_stat ? it.amplify_level : it.enhance_level) || 0;
+            const rn = rarityNameOf(it.rarity);
+            row.append(uiEl('span', 'dnf-rp-meta', (rn ? rn + ' ' : '') + (plus > 0 ? '+' + plus : '')));
+            body.append(row);
+        }
+    }
+
+    function renderRankSkills(profile, body, passiveOnly) {
+        const list = passiveOnly
+            ? (Array.isArray(profile && profile.passives) ? profile.passives : [])
+            : (Array.isArray(profile && profile.skills) ? profile.skills : []);
+        if (!list.length) {
+            body.append(uiEl('div', 'dnf-rp-empty', passiveOnly ? '没有被动数据' : '没有技能数据'));
+            return;
+        }
+        const mkRow = (s) => {
+            const learned = Number(s.learned_level != null ? s.learned_level : s.eff_level) || 0;
+            const eff = Number(s.eff_level != null ? s.eff_level : learned) || 0;
+            const max = Number(s.max_level) || 0;
+            const row = uiEl('div', 'dnf-rp-row' + (learned > 0 ? '' : ' dim'));
+            row.append(profileIconEl(s.icon_path, s.icon_index));
+            row.append(uiEl('span', 'dnf-rp-name', s.name || ''));
+            if (s.passive_kind === 'tp') row.append(uiEl('span', 'dnf-rp-tag', 'TP'));
+            let meta = 'Lv.' + learned + '/' + max;
+            if (eff !== learned) meta += '（实际 ' + eff + '）';
+            row.append(uiEl('span', 'dnf-rp-meta', meta));
+            return row;
+        };
+
+        if (passiveOnly) {
+            const sorted = list.slice().sort((a, b) => {
+                const la = Number(a.learned_level) || 0;
+                const lb = Number(b.learned_level) || 0;
+                if ((la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
+                return (Number(a.req_level) || 0) - (Number(b.req_level) || 0) || (Number(a.id) || 0) - (Number(b.id) || 0);
+            });
+            for (const s of sorted) body.append(mkRow(s));
+            return;
+        }
+
+        for (const kind of SKILL_KIND_ORDER) {
+            const items = list.filter(s => s.kind === kind)
+                .sort((a, b) => (Number(a.req_level) || 0) - (Number(b.req_level) || 0) || (Number(a.id) || 0) - (Number(b.id) || 0));
+            if (!items.length) continue;
+            const group = uiEl('div', 'dnf-rp-group');
+            group.append(uiEl('div', 'dnf-rp-group-title', SKILL_KIND_LABELS[kind] || kind));
+            for (const s of items) group.append(mkRow(s));
+            body.append(group);
+        }
+        if (!body.childElementCount) {
+            for (const s of list) body.append(mkRow(s));
+        }
+    }
+
+    /** 阶段 0：拉双方数据，算差异、返还与消耗 */
+    async function buildCopyPlan(profile) {
+        const store = getGameStore();
+        if (!store || !store.character || !store.character.value) throw new Error('未找到当前角色');
+        const me = store.character.value;
+        const [skills, loadout] = await Promise.all([
+            getMyCharApi(store, 'skills'),
+            getMyCharApi(store, 'skill-loadout')
+        ]);
+
+        const myEntries = [];
+        for (const s of (skills.skills || [])) myEntries.push({ s, group: 'active' });
+        for (const s of (skills.passives || [])) myEntries.push({ s, group: 'passive' });
+
+        const otherActive = new Map();
+        const otherPassive = new Map();
+        for (const s of (profile.skills || [])) otherActive.set(Number(s.id), s);
+        for (const s of (profile.passives || [])) otherPassive.set(Number(s.id), s);
+
+        const resetItems = [];
+        const raiseItems = [];
+        const targets = [];
+        const skipped = [];
+        let sameCount = 0;
+
+        for (const { s, group } of myEntries) {
+            const id = Number(s.id);
+            const oth = (group === 'active' ? otherActive : otherPassive).get(id);
+            if (!oth) {
+                skipped.push({ name: s.name || ('技能 ' + id), reason: '对方数据中没有该条' });
+                continue;
+            }
+            if (s.auto_granted || s.automatic) {
+                skipped.push({ name: s.name || ('技能 ' + id), reason: '自动习得，无法调整' });
+                continue;
+            }
+            const cur = Number(s.learned_level) || 0;
+            const max = Math.max(0, Number(s.max_level) || 0);
+            let tgt = Number(oth.learned_level);
+            if (!Number.isFinite(tgt)) tgt = Number(oth.eff_level) || 0;
+            tgt = Math.max(0, Math.min(max, tgt));
+            const starter = !!s.starter;
+            if (group === 'active' && starter && tgt < 1) tgt = 1;
+
+            const isTp = group === 'passive' && (s.passive_kind === 'tp'
+                || (Number(s.tp_cost) > 0 && !(Number(s.sp_cost) > 0)));
+            const spCost = Number(s.sp_cost) || 0;
+            const tpCost = Number(s.tp_cost) || 0;
+            const reqLevel = Number(s.req_level) || 0;
+
+            if (tgt === cur) {
+                targets.push({ id, name: s.name || ('技能 ' + id), target: tgt, group });
+                sameCount++;
+                continue;
+            }
+
+            if (tgt > cur) {
+                const blocked = s.block_reason === 'awakening' || s.block_reason === 'level'
+                    || s.block_reason === 'base' || (reqLevel > 0 && reqLevel > (Number(me.level) || 0));
+                if (blocked) {
+                    skipped.push({ name: s.name || ('技能 ' + id), reason: s.block_text || '当前无法学习（等级/觉醒限制）' });
+                    continue;
+                }
+            }
+
+            targets.push({ id, name: s.name || ('技能 ' + id), target: tgt, group });
+
+            let lowered = false;
+            if (cur > tgt) {
+                const refundSp = isTp ? 0 : (starter ? Math.max(0, cur - 1) : cur) * spCost;
+                const refundTp = isTp ? cur * (tpCost || 1) : 0;
+                resetItems.push({
+                    id, name: s.name || ('技能 ' + id), current: cur, target: tgt,
+                    starter, isTp, refundSp, refundTp
+                });
+                lowered = true;
+            }
+
+            const base = lowered ? (starter ? 1 : 0) : cur;
+            if (tgt > base) {
+                const levels = tgt - base;
+                raiseItems.push({
+                    id, name: s.name || ('技能 ' + id), group, isTp,
+                    from: base, to: tgt, max, reqLevel,
+                    spCost, tpCost,
+                    costSp: isTp ? 0 : levels * spCost,
+                    costTp: isTp ? levels * (tpCost || 1) : 0
+                });
+            }
+        }
+
+        // 阶段一：按当前投入从大到小（等级优先，其次返还量）
+        resetItems.sort((a, b) => (b.current - a.current)
+            || ((b.refundSp + b.refundTp) - (a.refundSp + a.refundTp)));
+
+        // 阶段二：被动优先，主动按 req_level 升序
+        const raiseOrder = raiseItems.slice().sort((a, b) => {
+            if (a.group !== b.group) return a.group === 'passive' ? -1 : 1;
+            return (a.reqLevel - b.reqLevel) || (a.id - b.id);
+        });
+
+        const refundSp = resetItems.reduce((n, x) => n + x.refundSp, 0);
+        const refundTp = resetItems.reduce((n, x) => n + x.refundTp, 0);
+        const costSp = raiseOrder.reduce((n, x) => n + x.costSp, 0);
+        const costTp = raiseOrder.reduce((n, x) => n + x.costTp, 0);
+        const availSp = (Number(me.sp) || 0) + refundSp;
+        const availTp = (Number(me.tp) || 0) + refundTp;
+        const deficitSp = Math.max(0, costSp - availSp);
+        const deficitTp = Math.max(0, costTp - availTp);
+
+        // 部分复制预演（按阶段二顺序，整项分配）
+        const partial = [];
+        const unaffordable = [];
+        if (deficitSp > 0 || deficitTp > 0) {
+            let remSp = availSp;
+            let remTp = availTp;
+            for (const it of raiseOrder) {
+                if (it.costSp <= remSp && it.costTp <= remTp) {
+                    remSp -= it.costSp;
+                    remTp -= it.costTp;
+                    partial.push(it);
+                } else {
+                    unaffordable.push(it);
+                }
+            }
+        }
+
+        return {
+            other: profile.character || {},
+            me,
+            resetItems,
+            raiseItems,
+            raiseOrder,
+            targets,
+            skipped,
+            sameCount,
+            refundSp, refundTp, costSp, costTp,
+            availSp, availTp, deficitSp, deficitTp,
+            partial, unaffordable,
+            loadoutSnapshot: Array.isArray(loadout.entries) ? loadout.entries : [],
+            otherLoadout: Array.isArray(profile.loadout) ? profile.loadout : []
+        };
+    }
+
+    function closeCopyPanel() {
+        if (_copyBusy) return;
+        if (_copyPanelEl) {
+            _copyPanelEl.remove();
+            _copyPanelEl = null;
+        }
+        if (_copyTriggerBtn) {
+            _copyTriggerBtn.disabled = false;
+            _copyTriggerBtn = null;
+        }
+    }
+
+    function openCopyConfirm(profile, triggerBtn) {
+        if (_copyBusy) return;
+        if (_copyPanelEl) closeCopyPanel();
+        _copyTriggerBtn = triggerBtn || null;
+
+        const mask = uiEl('div', 'dnf-rp-mask');
+        const panel = uiEl('div', 'dnf-rp-panel');
+        _copyPanelEl = mask;
+        panel.addEventListener('click', (e) => e.stopPropagation());
+        mask.addEventListener('click', (e) => { if (e.target === mask) closeCopyPanel(); });
+
+        const head = uiEl('div', 'dnf-rp-head');
+        const left = uiEl('div', '');
+        const title = uiEl('div', 'dnf-rp-title', '复制加点');
+        const sub = uiEl('div', 'dnf-rp-sub', '正在读取双方技能数据…');
+        left.append(title, sub);
+        const closeBtn = uiEl('button', 'dnf-rp-x', '×');
+        closeBtn.type = 'button';
+        closeBtn.title = '关闭';
+        closeBtn.addEventListener('click', closeCopyPanel);
+        head.append(left, closeBtn);
+
+        const body = uiEl('div', 'dnf-rp-body', '加载中…');
+        const foot = uiEl('div', 'dnf-rp-foot');
+        panel.append(head, body, foot);
+        mask.append(panel);
+        document.body.append(mask);
+        if (triggerBtn) triggerBtn.disabled = true;
+
+        buildCopyPlan(profile).then((plan) => {
+            if (_copyPanelEl !== mask) return;
+            const ob = plan.other || {};
+            sub.textContent = '对方：' + (ob.name || '?') + ' Lv.' + (ob.level != null ? ob.level : '?')
+                + ' · ' + (ob.job_name || ob.job || '');
+            renderCopyConfirm(plan, body, foot, closeBtn);
+        }).catch((err) => {
+            if (_copyPanelEl !== mask) return;
+            sub.textContent = '读取失败';
+            body.textContent = '';
+            body.append(uiEl('div', 'dnf-rp-empty', '读取技能数据失败：' + (err && err.message ? err.message : '未知错误')));
+            const cancel = uiEl('button', 'dnf-rp-btn', '关闭');
+            cancel.type = 'button';
+            cancel.addEventListener('click', closeCopyPanel);
+            foot.append(cancel);
+        });
+    }
+
+    function renderCopyConfirm(plan, body, foot, closeBtn) {
+        body.textContent = '';
+        foot.textContent = '';
+
+        const sec = (titleText) => {
+            const box = uiEl('div', 'dnf-cp-sec');
+            box.append(uiEl('div', 'dnf-cp-sec-title', titleText));
+            body.append(box);
+            return box;
+        };
+        const ul = (parent, lines, cls) => {
+            const list = uiEl('ul', cls || 'dnf-cp-list');
+            for (const ln of lines) list.append(uiEl('li', '', ln));
+            parent.append(list);
+        };
+
+        const totalActions = plan.resetItems.length + plan.raiseItems.length;
+        if (!totalActions) {
+            sec('无需调整').append(uiEl('div', 'dnf-cp-tip', '你与对方的主动/被动等级已经一致，没有需要归零或升级的项。'));
+            if (plan.skipped.length) {
+                const s = sec('跳过项');
+                ul(s, plan.skipped.map(x => x.name + '：' + x.reason));
+            }
+            const done = uiEl('button', 'dnf-rp-btn', '关闭');
+            done.type = 'button';
+            done.addEventListener('click', closeCopyPanel);
+            foot.append(done);
+            return;
+        }
+
+        // 归零清单
+        const r = sec('将归零（' + plan.resetItems.length + ' 项，返还 SP +' + plan.refundSp
+            + (plan.refundTp ? ' / TP +' + plan.refundTp : '') + '）');
+        if (!plan.resetItems.length) {
+            r.append(uiEl('div', 'dnf-cp-tip', '无（没有高于对方的技能）'));
+        } else {
+            ul(r, plan.resetItems.map(x =>
+                x.name + '：Lv.' + x.current + ' → ' + (x.starter ? 'Lv.1（起始技能）' : 'Lv.0')
+                + ' · 返还 ' + (x.refundSp ? 'SP +' + x.refundSp : '') + (x.refundTp ? (x.refundSp ? '，' : '') + 'TP +' + x.refundTp : '')));
+        }
+
+        // 升级清单
+        const u = sec('将升级（' + plan.raiseItems.length + ' 项，消耗 SP ' + plan.costSp
+            + (plan.costTp ? ' / TP ' + plan.costTp : '') + '）');
+        if (!plan.raiseItems.length) {
+            u.append(uiEl('div', 'dnf-cp-tip', '无'));
+        } else {
+            ul(u, plan.raiseOrder.map(x =>
+                x.name + '：Lv.' + x.from + ' → Lv.' + x.to
+                + '（' + (x.isTp ? 'TP -' + x.costTp : 'SP -' + x.costSp) + '）'));
+        }
+
+        // 合计
+        const sum = sec('合计');
+        sum.append(uiEl('div', 'dnf-cp-tip',
+            '可用 SP ' + plan.availSp + '（当前 ' + (Number(plan.me.sp) || 0) + ' + 返还 ' + plan.refundSp + '）'
+            + ' · 升级需 ' + plan.costSp + '，净变化 ' + (plan.availSp - plan.costSp)));
+        if (plan.costTp || plan.refundTp) {
+            sum.append(uiEl('div', 'dnf-cp-tip',
+                '可用 TP ' + plan.availTp + '（当前 ' + (Number(plan.me.tp) || 0) + ' + 返还 ' + plan.refundTp + '）'
+                + ' · 升级需 ' + plan.costTp + '，净变化 ' + (plan.availTp - plan.costTp)));
+        }
+        if (plan.deficitSp > 0 || plan.deficitTp > 0) {
+            sum.append(uiEl('div', 'dnf-cp-warn',
+                '点数不足：还差 ' + (plan.deficitSp ? 'SP ' + plan.deficitSp : '')
+                + (plan.deficitTp ? (plan.deficitSp ? ' / ' : '') + 'TP ' + plan.deficitTp : '')
+                + '。按顺序最多可完成 ' + plan.partial.length + '/' + plan.raiseItems.length + ' 项升级，'
+                + '剩余将停在可达等级。'));
+        }
+        if (plan.skipped.length) {
+            sum.append(uiEl('div', 'dnf-cp-tip', '跳过 ' + plan.skipped.length + ' 项：'
+                + plan.skipped.map(x => x.name).join('、')));
+        }
+
+        // 不可逆 + 中间态警告
+        body.append(uiEl('div', 'dnf-cp-tip', '技能重置与学习均不可撤销，请确认后再执行。'));
+        if (plan.resetItems.length) {
+            body.append(uiEl('div', 'dnf-cp-warn',
+                '执行期间以下 ' + plan.resetItems.length + ' 项会处于 0 级、战力明显下降，建议非战斗时执行：'
+                + plan.resetItems.map(x => x.name).join('、') + '。'));
+        }
+
+        // 勾选项
+        const opt = uiEl('label', 'dnf-cp-opt');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = false;
+        opt.append(cb, uiEl('span', '', '同时复制技能栏（会覆盖你当前的出战技能配置）'));
+        body.append(opt);
+
+        const cancel = uiEl('button', 'dnf-rp-btn', '取消');
+        cancel.type = 'button';
+        cancel.addEventListener('click', closeCopyPanel);
+        const start = uiEl('button', 'dnf-rp-btn primary', '开始执行');
+        start.type = 'button';
+        foot.append(cancel, start);
+
+        start.addEventListener('click', () => {
+            if (_copyBusy) return;
+            const syncLoadout = cb.checked;
+            start.disabled = true;
+            cancel.disabled = true;
+            cb.disabled = true;
+            closeBtn.disabled = true;
+            foot.textContent = '';
+            body.textContent = '';
+            const logEl = uiEl('div', 'dnf-cp-log');
+            const actionsEl = uiEl('div', '');
+            body.append(logEl, actionsEl);
+            const ui = {
+                actionsEl,
+                append(text, kind) {
+                    const line = uiEl('div', kind || '', text);
+                    logEl.append(line);
+                    logEl.scrollTop = logEl.scrollHeight;
+                }
+            };
+            executeCopyPlan(plan, syncLoadout, ui).then(() => {
+                closeBtn.disabled = false;
+                const done = uiEl('button', 'dnf-rp-btn', '关闭');
+                done.type = 'button';
+                done.addEventListener('click', closeCopyPanel);
+                foot.append(done);
+            }).catch((err) => {
+                ui.append('执行异常：' + (err && err.message ? err.message : '未知错误'), 'err');
+                closeBtn.disabled = false;
+                const done = uiEl('button', 'dnf-rp-btn', '关闭');
+                done.type = 'button';
+                done.addEventListener('click', closeCopyPanel);
+                foot.append(done);
+            });
+        });
+    }
+
+    function askCopyChoice(ui, text, options) {
+        return new Promise((resolve) => {
+            const box = uiEl('div', 'dnf-cp-actions');
+            box.append(uiEl('span', 'dnf-cp-warn', text));
+            for (const o of options) {
+                const b = uiEl('button', 'dnf-rp-btn' + (o.primary ? ' primary' : ''), o.label);
+                b.type = 'button';
+                b.addEventListener('click', () => {
+                    box.remove();
+                    resolve(o.key);
+                });
+                box.append(b);
+            }
+            ui.actionsEl.append(box);
+        });
+    }
+
+    function isPointsShortError(msg) {
+        const s = String(msg || '');
+        return /(SP|TP|技能点|点数).{0,8}(不足|不够)/i.test(s) || /(不足|不够).{0,8}(SP|TP|技能点|点数)/i.test(s);
+    }
+
+    /** 单条技能升到目标等级；绝不越级 */
+    async function raiseSkillTo(store, it, ui) {
+        let cur = it.from;
+        if (cur >= it.to) return;
+        if (it.isTp) {
+            while (cur < it.to) {
+                await postCharacterApi(store, 'tp-learn', { skill_id: it.id }, 15000, '学习失败');
+                cur++;
+                ui.append('升级：' + it.name + ' Lv.' + cur + '/' + it.to, 'ok');
+                if (cur < it.to) await sleepMs(SKILL_ACTION_GAP_MS);
+            }
+            return;
+        }
+        if (cur === 0) {
+            await postCharacterApi(store, 'skill-learn', { skill_id: it.id }, 15000, '学习失败');
+            cur = 1;
+            ui.append('学习：' + it.name + ' Lv.1/' + it.to, 'ok');
+            if (cur >= it.to) return;
+            await sleepMs(SKILL_ACTION_GAP_MS);
+        }
+        if (it.to === it.max && it.max > 0) {
+            const r = await postCharacterApi(store, 'skill-upgrade-max', { skill_id: it.id }, 15000, '升级失败');
+            const lv = Number(r && r.level);
+            const up = Number(r && r.upgraded);
+            if (Number.isFinite(lv) && lv > cur) cur = lv;
+            else if (Number.isFinite(up) && up > 0) cur = Math.min(it.to, cur + up);
+            else cur = Math.min(it.to, cur + 1);
+            ui.append('一次升满：' + it.name + ' Lv.' + cur + '/' + it.to, 'ok');
+            if (cur < it.to) await sleepMs(SKILL_ACTION_GAP_MS);
+        }
+        while (cur < it.to) {
+            await postCharacterApi(store, 'skill-upgrade', { skill_id: it.id }, 15000, '升级失败');
+            cur++;
+            ui.append('升级：' + it.name + ' Lv.' + cur + '/' + it.to, 'ok');
+            if (cur < it.to) await sleepMs(SKILL_ACTION_GAP_MS);
+        }
+    }
+
+    async function reconcileCopy(plan, store, ui) {
+        let after = null;
+        try { after = await getMyCharApi(store, 'skills'); }
+        catch (err) {
+            ui.append('对账失败：' + (err && err.message ? err.message : '未知错误'), 'err');
+            return;
+        }
+        const map = new Map();
+        for (const s of (after.skills || [])) map.set(Number(s.id), Number(s.learned_level) || 0);
+        for (const s of (after.passives || [])) map.set(Number(s.id), Number(s.learned_level) || 0);
+        ui.append('—— 对账（目标 / 实际 / 差额）——', 'warn');
+        let bad = 0;
+        for (const t of plan.targets) {
+            if (!map.has(t.id)) {
+                ui.append(t.name + '：目标 Lv.' + t.target + ' / 实际 未找到', 'warn');
+                bad++;
+                continue;
+            }
+            const actual = map.get(t.id);
+            const diff = actual - t.target;
+            if (diff !== 0) bad++;
+            ui.append(t.name + '：目标 Lv.' + t.target + ' / 实际 Lv.' + actual
+                + ' / 差额 ' + (diff > 0 ? '+' + diff : diff), diff === 0 ? 'ok' : 'err');
+        }
+        ui.append(bad ? ('仍有 ' + bad + ' 项与目标不一致') : '全部与目标一致', bad ? 'err' : 'ok');
+    }
+
+    function loadoutSignature(entries) {
+        return JSON.stringify((entries || []).filter(e => e && e.enabled)
+            .map(e => String(e.job) + ':' + String(e.skill_id)).sort());
+    }
+
+    async function syncSkillLoadout(plan, store, syncLoadout, ui) {
+        try {
+            if (syncLoadout) {
+                const entries = (plan.otherLoadout || [])
+                    .filter(e => e && e.enabled)
+                    .sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0))
+                    .map(e => ({ job: e.job, skill_id: e.skill_id }));
+                if (!entries.length) {
+                    ui.append('对方技能栏为空，已跳过技能栏复制', 'warn');
+                    return;
+                }
+                await postCharacterApi(store, 'skill-loadout', { entries }, 15000, '技能栏覆盖失败');
+                ui.append('已复制对方技能栏（' + entries.length + ' 项）', 'ok');
+                return;
+            }
+            // 未勾选：只有检测到条目被重置动作影响时才写回一次快照
+            const cur = await getMyCharApi(store, 'skill-loadout');
+            if (loadoutSignature(cur.entries) === loadoutSignature(plan.loadoutSnapshot)) return;
+            const entries = (plan.loadoutSnapshot || [])
+                .filter(e => e && e.enabled)
+                .sort((a, b) => (Number(a.position) || 0) - (Number(b.position) || 0))
+                .map(e => ({ job: e.job, skill_id: e.skill_id }));
+            if (!entries.length) return;
+            await postCharacterApi(store, 'skill-loadout', { entries }, 15000, '技能栏恢复失败');
+            ui.append('检测到技能栏被改动，已按快照写回（' + entries.length + ' 项）', 'warn');
+        } catch (err) {
+            ui.append('技能栏处理失败：' + (err && err.message ? err.message : '未知错误'), 'err');
+        }
+    }
+
+    async function executeCopyPlan(plan, syncLoadout, ui) {
+        if (_copyBusy) return;
+        _copyBusy = true;
+        const store = getGameStore();
+        try {
+            if (!store) throw new Error('未找到游戏状态，无法执行');
+
+            // ===== 阶段 1：逐个归零 =====
+            let abortAll = false;
+            if (plan.resetItems.length) {
+                ui.append('阶段一：逐个归零（' + plan.resetItems.length + ' 项）', 'warn');
+            }
+            for (let i = 0; i < plan.resetItems.length; i++) {
+                const it = plan.resetItems[i];
+                try {
+                    const r = await postCharacterApi(store, 'skill-reset-one', { skill_id: it.id }, 15000, '重置失败');
+                    const rs = Number(r && r.refund_sp) || 0;
+                    const rt = Number(r && r.refund_tp) || 0;
+                    ui.append('已归零 ' + (i + 1) + '/' + plan.resetItems.length + '：' + it.name
+                        + ' · 返还 SP +' + rs + (rt ? '，TP +' + rt : ''), 'ok');
+                } catch (err) {
+                    const msg = err && err.message ? err.message : '未知错误';
+                    ui.append('重置失败：' + it.name + ' · ' + msg, 'err');
+                    const choice = await askCopyChoice(ui, '阶段一重置失败（' + it.name + '），如何处理？', [
+                        { key: 'continue', label: '继续' },
+                        { key: 'skipStage1', label: '直接进入加点' },
+                        { key: 'abort', label: '中止' }
+                    ]);
+                    if (choice === 'abort') { abortAll = true; break; }
+                    if (choice === 'skipStage1') break;
+                }
+                await sleepMs(SKILL_ACTION_GAP_MS);
+            }
+
+            // ===== 阶段 2：统一加点 =====
+            if (!abortAll) {
+                if (plan.raiseOrder.length) {
+                    ui.append('阶段二：加点（' + plan.raiseOrder.length + ' 项，被动优先）', 'warn');
+                }
+                for (let i = 0; i < plan.raiseOrder.length; i++) {
+                    const it = plan.raiseOrder[i];
+                    try {
+                        await raiseSkillTo(store, it, ui);
+                    } catch (err) {
+                        const msg = err && err.message ? err.message : '未知错误';
+                        if (isPointsShortError(msg)) {
+                            ui.append('点数不足，停止加点：' + msg, 'err');
+                            const rest = plan.raiseOrder.slice(i).map(x => x.name);
+                            if (rest.length) ui.append('未完成：' + rest.join('、'), 'warn');
+                            break;
+                        }
+                        ui.append('升级失败（已跳过）：' + it.name + ' · ' + msg, 'err');
+                        const choice = await askCopyChoice(ui, '阶段二升级失败（' + it.name + '），如何处理？', [
+                            { key: 'continue', label: '继续' },
+                            { key: 'stop', label: '停止并展示落差', primary: true }
+                        ]);
+                        if (choice === 'stop') {
+                            ui.append('剩余未完成：' + plan.raiseOrder.slice(i + 1).map(x => x.name).join('、'), 'warn');
+                            break;
+                        }
+                    }
+                    await sleepMs(SKILL_ACTION_GAP_MS);
+                }
+            } else {
+                ui.append('已中止：不再执行加点', 'err');
+            }
+
+            // ===== 对账 =====
+            await reconcileCopy(plan, store, ui);
+
+            // ===== 技能栏 =====
+            await syncSkillLoadout(plan, store, syncLoadout, ui);
+
+            ui.append('执行结束', 'warn');
+        } finally {
+            _copyBusy = false;
+        }
+    }
+
     function start() {
         // 防止脚本被重复注入（Tampermonkey 更新 / SPA 重载）后出现多套定时器
         if (window.__dnfHelperStarted) return;
@@ -5223,39 +6391,7 @@
         // v5.88：旁路读取分解响应，用 toast 提示实际获得的材料
         initDecomposeGainToast();
 
-        // 1. 扫描分层，避免背包/装备列表渲染风暴拖慢加载：
-        //  - runScans（全量）：只在 1s 定时轮询执行；含需要读取页面文本的检测
-        //    （死亡/登录/结算），文本读取成本高，不做高频触发。
-        //  - runLightScans（轻量）：DOM 变化时执行，只做纯 DOM 维护，不读取页面文本。
-        const runScans = () => {
-            relocateTabsAfterSettlement();
-            applyModuleOrder();
-            applyHideUnlearnedSkills();
-            applyUiTheme();
-            applyGameAssistantVisibility();
-            applyGameUiTweaks();
-            applyDetailDepositButton();
-            applyWarehouseWithdrawBox();
-            applyClearBoxAllButton();
-            if (CONFIG.enableReviveHud) {
-                checkLoginAndReset();
-                scanSettlement();
-                scanBattleLog();
-                scanLevelExp();
-                scanAssistStats();
-            }
-        };
-        const runLightScans = () => {
-            relocateTabsAfterSettlement();
-            applyModuleOrder();
-            applyHideUnlearnedSkills();
-            applyUiTheme();
-            applyGameAssistantVisibility();
-            applyGameUiTweaks();
-            applyDetailDepositButton();
-            applyWarehouseWithdrawBox();
-            applyClearBoxAllButton();
-        };
+        // 1. 扫描分层（v5.90：统一走模块级 runScans / runLightScans，不再本地重复定义）
         // DOM 变化去抖：合并为一轮轻量扫描
         let lightScanScheduled = false;
         const scheduleLightScan = () => {
