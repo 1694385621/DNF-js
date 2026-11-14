@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      5.92
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色资料（每行插件图标，点击才拉一次 profile，装备/技能/被动三页；同职业同成长方向可一键复制加点，两段式归零→逐级升级，结束对账）。
+// @version      5.94
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -243,7 +243,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '5.92';
+    const VERSION = '5.94';
 
     /**
      * 游戏接口 GET 统一超时（v5.90）
@@ -2516,11 +2516,16 @@
             // 与「存仓」同一行，只加插件自己的按钮，不动游戏原生按钮
             '.dnf-deposit-box .dnf-decompose-btn{border-color:#a65a2a;color:#ffd0a6}',
             '.dnf-deposit-box .dnf-decompose-btn[disabled]{opacity:.55;cursor:not-allowed}',
-            // ===== 排行榜角色资料 / 复制加点面板（v5.91）=====
-            '.dnf-rank-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;' +
-                'margin-left:4px;padding:0;border-radius:4px;border:1px solid #9b7645;background:#2a2118;' +
-                'color:#ffd794;font:11px/1 Microsoft YaHei,sans-serif;cursor:pointer;vertical-align:middle}',
-            '.dnf-rank-btn:hover{background:#3a2c1d}',
+            // ===== 复制技能 / 复制加点面板（v5.91，v5.93 入口移到原生详情弹窗）=====
+            // 只追加在「技能配置（出战顺序）」块之后，宽度跟随原生弹窗，窄屏自动换行
+            '.dnf-npb{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;' +
+                'border:1px solid #6d5533;border-radius:8px;background:#2a2118;box-sizing:border-box;max-width:100%}',
+            '.dnf-npb-btn{flex:0 0 auto;min-height:32px;padding:0 14px;border-radius:6px;border:1px solid #c7751a;' +
+                'background:linear-gradient(180deg,#f0a23d,#d47e1c);color:#1a1206;cursor:pointer;white-space:nowrap;' +
+                'font:13px/1.2 Microsoft YaHei,sans-serif;box-sizing:border-box}',
+            '.dnf-npb-btn[disabled]{opacity:.55;cursor:not-allowed}',
+            '.dnf-npb-hint{flex:1 1 150px;min-width:0;color:#baa78e;' +
+                'font:12px/1.4 Microsoft YaHei,sans-serif;overflow-wrap:anywhere}',
             '.dnf-rp-mask{position:fixed;inset:0;z-index:1000003;display:flex;align-items:center;' +
                 'justify-content:center;padding:12px;background:#0008}',
             '.dnf-rp-panel{display:flex;flex-direction:column;width:min(560px,calc(100vw - 24px));' +
@@ -2534,29 +2539,11 @@
             '.dnf-rp-x{flex:0 0 auto;min-width:30px;min-height:30px;background:none;border:0;color:#dfc79e;' +
                 'font-size:22px;line-height:1;cursor:pointer}',
             '.dnf-rp-x[disabled]{opacity:.4;cursor:not-allowed}',
-            '.dnf-rp-tabs{display:flex;gap:6px;flex:0 0 auto;padding:8px 14px 0}',
-            '.dnf-rp-tab{min-height:30px;padding:0 12px;border-radius:6px 6px 0 0;cursor:pointer;' +
-                'border:1px solid #6b5633;border-bottom:0;background:#2a2118;color:#c8b593;' +
-                'font:12px/1 Microsoft YaHei,sans-serif}',
-            '.dnf-rp-tab.active{background:#3a2c1d;color:#ffd794;border-color:#9b7645}',
             '.dnf-rp-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:10px 14px;' +
                 'overscroll-behavior:contain}',
-            '.dnf-rp-group{margin-bottom:8px}',
-            '.dnf-rp-group-title{color:#baa78e;font-size:12px;margin:6px 0 4px}',
-            '.dnf-rp-row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;' +
-                'border:1px solid #3f3123;background:#261e15;margin-bottom:4px;min-width:0}',
-            '.dnf-rp-row.dim{opacity:.45}',
-            '.dnf-rp-ico{width:26px;height:26px;flex:0 0 auto;border-radius:4px;object-fit:contain;' +
-                'background:#1a130c;border:1px solid #4b3a26}',
-            '.dnf-rp-slot{flex:0 0 52px;color:#baa78e;font-size:12px}',
-            '.dnf-rp-name{flex:1 1 auto;min-width:0;color:#f0e7d2}',
-            '.dnf-rp-meta{flex:0 0 auto;color:#ffd794;font-size:12px;white-space:nowrap}',
-            '.dnf-rp-tag{flex:0 0 auto;font-size:11px;padding:0 4px;border-radius:3px;' +
-                'border:1px solid #9b7645;color:#ffd794}',
             '.dnf-rp-empty{color:#baa78e;font-size:12px;padding:8px 2px}',
             '.dnf-rp-foot{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:8px;' +
                 'padding:10px 14px;border-top:1px solid #56422f;background:#241b12;flex-wrap:wrap}',
-            '.dnf-rp-hint{color:#baa78e;font-size:12px}',
             '.dnf-rp-btn{min-width:96px;min-height:34px;padding:0 14px;border-radius:6px;cursor:pointer;' +
                 'font:700 13px/1 Microsoft YaHei,sans-serif;border:1px solid #8f6d3f;background:#2a2118;color:#e6d3b3}',
             '.dnf-rp-btn.primary{border-color:#c7751a;background:linear-gradient(180deg,#f0a23d,#d47e1c);color:#1a1206}',
@@ -4395,7 +4382,7 @@
         applyGameAssistantVisibility();
         applyGameUiTweaks();
         applyDetailDepositButton();
-        applyRankProfileIcons();
+        applyNativeProfileCopyButton();
         applyWarehouseWithdrawBox();
         applyClearBoxAllButton();
     }
@@ -5516,12 +5503,12 @@
     }
 
     /* ============================================================
-     * 排行榜「查看资料 / 复制加点」（v5.91）
+     * 排行榜「复制技能」（v5.93 入口；v5.94 删除已死代码的三页面板）
      *
-     * 入口：排行榜每行角色名旁一个插件小图标；点击时才请求
+     * 入口：游戏原生排行榜角色详情弹窗 →「技能配置」页 →「技能配置（出战顺序）」
+     *   块之后，只追加插件自己的按钮，不改写/移动原生节点；点击时才请求
      *   GET /api/characters/{id}/profile （一次点击只拉一次，禁止批量遍历榜单）。
-     * 面板：装备 / 技能 / 被动 三页。
-     * 复制门槛：对方 character.job 与 grow_type 都与我方相同才显示「复制加点」。
+     * 复制门槛：对方 character.job 与 grow_type 都与我方相同才可点「复制技能」。
      *
      * 复制流程（两段式）：
      *   阶段 0：拉双方数据 → 分「需降 / 需升 / 一致」，主动/被动分开；
@@ -5540,17 +5527,8 @@
      * 失败：阶段一「继续 / 直接进入加点 / 中止」，阶段二「继续 / 停止并展示落差」；
      *       不自动回退、不自动重试。
      * ============================================================ */
-    const SKILL_KIND_LABELS = { buff: '增益', bullet: '属性弹', summon: '召唤', stance: '姿态', active: '输出' };
-    const SKILL_KIND_ORDER = ['buff', 'bullet', 'summon', 'stance', 'active'];
-    const EQUIP_SLOT_LABELS = {
-        weapon: '武器', coat: '上衣', pants: '下装', shoulder: '头肩', shoes: '鞋子', belt: '腰带',
-        wrist: '手镯', amulet: '项链', ring: '戒指', magicstone: '魔法石', support: '辅助装备', subweapon: '副武器'
-    };
-    const EQUIP_SLOT_ORDER = ['weapon', 'coat', 'pants', 'shoulder', 'shoes', 'belt',
-        'wrist', 'amulet', 'ring', 'magicstone', 'support', 'subweapon'];
     const SKILL_ACTION_GAP_MS = 250;
 
-    let _rankPanelEl = null;
     let _copyPanelEl = null;
     let _copyBusy = false;
     let _copyTriggerBtn = null;
@@ -5571,14 +5549,6 @@
         return token ? { Authorization: 'Bearer ' + token } : {};
     }
 
-    /** 与游戏一致的图标地址（/assets/icons/...） */
-    function dnfIconUrl(path, index) {
-        if (!path || index === null || index === undefined) return '';
-        let p = String(path).replace(/\\/g, '/').toLowerCase();
-        if (p.endsWith('.img')) p = p.slice(0, -4);
-        return '/assets/icons/' + ('sprite/' + p).replace(/\//g, '_') + '_' + index + '.png';
-    }
-
     async function fetchJson(url) {
         const res = await apiFetch(url, { headers: authHeaders() });
         let data = null;
@@ -5596,219 +5566,90 @@
         return fetchJson('/api/characters/' + charId + '/' + path);
     }
 
-    /** 只给排行榜行补图标；点击才请求对方 profile，绝不批量遍历 */
-    function applyRankProfileIcons() {
-        const rows = document.querySelectorAll('.rank-row');
-        if (!rows.length) return;
-        const store = getGameStore();
-        if (!store || !store.character || !store.character.value) return;
-        const rd = store.rankingData ? store.rankingData.value : null;
-        const list = rd && Array.isArray(rd.ranking) ? rd.ranking : null;
-        if (!list || !list.length) return;
-        const me = store.character.value;
-        const meId = Number(me.id) || 0;
+    /**
+     * v5.93：复制技能入口——只追加在游戏原生排行榜角色详情弹窗的
+     * 「技能配置（出战顺序）」块之后，不改写、不移动原生节点。
+     * 识别方式：.modal-mask .modal .skill-pane 下存在 .loadout-box 且标题匹配；
+     * 角色身份用弹窗头部「名字 + 职业名」匹配 store.rankingData，唯一匹配才注入。
+     * 由 runLightScans 的 MutationObserver 驱动，弹窗关闭/切页后自动清理，避免残留与重复。
+     */
+    let _nativeCopyEl = null;
+    let _nativeCopyKey = '';
 
-        for (const row of rows) {
-            if (row.querySelector('[data-dnf-rank-profile]')) continue;
-            const nameEl = row.querySelector('.rank-name');
-            if (!nameEl) continue;
-            const name = (nameEl.textContent || '').trim();
-            const noEl = row.querySelector('.rank-no');
-            const rank = noEl ? parseInt((noEl.textContent || '').trim(), 10) : NaN;
-            let rec = null;
-            if (Number.isFinite(rank)) rec = list.find(r => Number(r.rank) === rank && r.name === name) || null;
-            if (!rec) rec = list.find(r => r.name === name) || null;
-            if (!rec || !rec.id) continue;
-            const id = Number(rec.id);
-            if (meId && id === meId) continue;
-            const same = rec.job === me.job && rec.grow_type === me.grow_type;
-            const btn = uiEl('button', 'dnf-rank-btn', '◈');
-            btn.type = 'button';
-            btn.setAttribute('data-dnf-rank-profile', String(id));
-            btn.title = '插件：查看装备/技能/被动' + (same ? ' · 可复制加点' : ' · 仅查看（职业/成长方向不同）');
+    function removeNativeProfileCopyButton() {
+        if (_nativeCopyEl && _nativeCopyEl.isConnected) _nativeCopyEl.remove();
+        _nativeCopyEl = null;
+        _nativeCopyKey = '';
+    }
+
+    /** 按「名字 + 职业名」在排行榜数据里找唯一记录；匹配到多条就不猜 */
+    function findRankRecordByName(name, jobText) {
+        const store = getGameStore();
+        const rd = store && store.rankingData ? store.rankingData.value : null;
+        const list = rd && Array.isArray(rd.ranking) ? rd.ranking : null;
+        if (!name || !list || !list.length) return null;
+        const hits = list.filter((r) => r && String(r.name || '').trim() === name
+            && (!jobText || !r.job_name || jobText.indexOf(String(r.job_name)) >= 0));
+        return hits.length === 1 ? hits[0] : null;
+    }
+
+    function applyNativeProfileCopyButton() {
+        const pane = document.querySelector('.modal-mask .modal .skill-pane');
+        const box = pane ? pane.querySelector('.loadout-box') : null;
+        const titleOk = !!(box && Array.from(box.querySelectorAll('.box-title'))
+            .some((t) => (t.textContent || '').indexOf('技能配置（出战顺序）') >= 0));
+        if (!titleOk) { removeNativeProfileCopyButton(); return; }
+
+        const mask = pane.closest('.modal-mask');
+        const nameEl = mask && mask.querySelector('.head-name');
+        const jobEl = mask && mask.querySelector('.head-job');
+        const rec = findRankRecordByName(((nameEl || {}).textContent || '').trim(), ((jobEl || {}).textContent || '').trim());
+        const store = getGameStore();
+        const me = store && store.character ? store.character.value : null;
+        // 找不到唯一记录、或查看的是自己：不注入，保持原生弹窗原样
+        if (!rec || !rec.id || !me || (me.id && Number(rec.id) === Number(me.id))) {
+            removeNativeProfileCopyButton();
+            return;
+        }
+
+        const key = String(rec.id);
+        if (_nativeCopyEl && _nativeCopyEl.isConnected && _nativeCopyKey === key) return;
+        if (_nativeCopyEl && _nativeCopyEl.isConnected) _nativeCopyEl.remove();
+        _nativeCopyEl = null;
+
+        const same = rec.job === me.job && rec.grow_type === me.grow_type;
+        const wrap = uiEl('div', 'dnf-npb');
+        wrap.setAttribute('data-dnf-native-copy', key);
+        const btn = uiEl('button', 'dnf-npb-btn', '复制技能');
+        btn.type = 'button';
+        const hint = uiEl('span', 'dnf-npb-hint', same
+            ? '同职业、同成长方向：把对方的技能/被动等级复制到当前角色（执行前有一次总确认）'
+            : '职业或成长方向与当前角色不同，无法复制技能');
+        if (same) {
+            btn.title = '把对方的技能/被动等级复制到当前角色（两段式，执行前有一次总确认）';
             btn.addEventListener('click', (ev) => {
                 ev.preventDefault();
                 ev.stopPropagation();
-                openRankProfilePanel(id, rec.name);
+                if (_copyBusy) { showTip('复制加点正在执行，请稍候'); return; }
+                btn.disabled = true;
+                btn.textContent = '读取中…';
+                fetchJson('/api/characters/' + rec.id + '/profile').then((profile) => {
+                    btn.textContent = '复制技能';
+                    openCopyConfirm(profile, btn);
+                }).catch((err) => {
+                    btn.disabled = false;
+                    btn.textContent = '复制技能';
+                    showTip('读取对方技能失败：' + (err && err.message ? err.message : '未知错误'));
+                });
             });
-            nameEl.insertAdjacentElement('afterend', btn);
-        }
-    }
-
-    function closeRankProfilePanel() {
-        if (_copyPanelEl) return; // 复制面板还开着时先不关资料面板
-        if (_rankPanelEl) {
-            _rankPanelEl.remove();
-            _rankPanelEl = null;
-        }
-    }
-
-    function openRankProfilePanel(charId, fallbackName) {
-        if (_copyBusy) { showTip('复制加点正在执行，请稍候'); return; }
-        if (_copyPanelEl) closeCopyPanel();
-        if (_rankPanelEl) { _rankPanelEl.remove(); _rankPanelEl = null; }
-
-        const mask = uiEl('div', 'dnf-rp-mask');
-        const panel = uiEl('div', 'dnf-rp-panel');
-        _rankPanelEl = mask;
-        mask.addEventListener('click', (e) => { if (e.target === mask) closeRankProfilePanel(); });
-        panel.addEventListener('click', (e) => e.stopPropagation());
-
-        const head = uiEl('div', 'dnf-rp-head');
-        const left = uiEl('div', '');
-        const title = uiEl('div', 'dnf-rp-title', fallbackName || '角色资料');
-        const sub = uiEl('div', 'dnf-rp-sub', '加载中…');
-        left.append(title, sub);
-        const closeBtn = uiEl('button', 'dnf-rp-x', '×');
-        closeBtn.type = 'button';
-        closeBtn.title = '关闭';
-        closeBtn.addEventListener('click', closeRankProfilePanel);
-        head.append(left, closeBtn);
-
-        const tabs = uiEl('div', 'dnf-rp-tabs');
-        const body = uiEl('div', 'dnf-rp-body', '加载中…');
-        const foot = uiEl('div', 'dnf-rp-foot');
-        panel.append(head, tabs, body, foot);
-        mask.append(panel);
-        document.body.append(mask);
-
-        fetchJson('/api/characters/' + charId + '/profile').then((profile) => {
-            if (_rankPanelEl !== mask) return;
-            renderRankProfile(profile, { title, sub, tabs, body, foot }, fallbackName);
-        }).catch((err) => {
-            if (_rankPanelEl !== mask) return;
-            sub.textContent = '加载失败';
-            body.textContent = '';
-            body.append(uiEl('div', 'dnf-rp-empty', '读取资料失败：' + (err && err.message ? err.message : '未知错误')));
-        });
-    }
-
-    function renderRankProfile(profile, refs, fallbackName) {
-        const ch = (profile && profile.character) || {};
-        const store = getGameStore();
-        const me = store && store.character ? store.character.value : null;
-        const same = !!(me && ch.job && ch.grow_type && ch.job === me.job && ch.grow_type === me.grow_type);
-
-        refs.title.textContent = ch.name || fallbackName || '角色资料';
-        const jobText = ch.job_name || ch.job || '';
-        refs.sub.textContent = 'Lv.' + (ch.level != null ? ch.level : '?') + (jobText ? ' · ' + jobText : '')
-            + ' · 战力 ' + (Number(ch.power) || 0).toLocaleString();
-
-        refs.tabs.textContent = '';
-        refs.body.textContent = '';
-        refs.foot.textContent = '';
-
-        const tabDefs = [['equip', '装备'], ['skill', '技能'], ['passive', '被动']];
-        const tabBtns = new Map();
-        const setTab = (key) => {
-            tabBtns.forEach((b, k) => b.classList.toggle('active', k === key));
-            refs.body.textContent = '';
-            refs.body.scrollTop = 0;
-            if (key === 'equip') renderRankEquip(profile, refs.body);
-            else if (key === 'skill') renderRankSkills(profile, refs.body, false);
-            else renderRankSkills(profile, refs.body, true);
-        };
-        for (const [key, label] of tabDefs) {
-            const b = uiEl('button', 'dnf-rp-tab', label);
-            b.type = 'button';
-            b.addEventListener('click', () => setTab(key));
-            tabBtns.set(key, b);
-            refs.tabs.append(b);
-        }
-
-        if (same) {
-            const copyBtn = uiEl('button', 'dnf-rp-btn primary', '复制加点');
-            copyBtn.type = 'button';
-            copyBtn.title = '把对方技能/被动等级复制到当前角色（两段式，执行前有一次总确认）';
-            copyBtn.addEventListener('click', () => openCopyConfirm(profile, copyBtn));
-            refs.foot.append(uiEl('span', 'dnf-rp-hint', '同职业、同成长方向'), copyBtn);
         } else {
-            refs.foot.append(uiEl('span', 'dnf-rp-hint', '职业或成长方向不同，仅可查看'));
+            btn.disabled = true;
+            btn.title = '仅同职业、同成长方向的角色可以复制技能';
         }
-        setTab('equip');
-    }
-
-    function profileIconEl(path, index) {
-        const src = dnfIconUrl(path, index);
-        if (!src) return uiEl('span', 'dnf-rp-ico');
-        const img = document.createElement('img');
-        img.className = 'dnf-rp-ico';
-        img.loading = 'lazy';
-        img.src = src;
-        img.alt = '';
-        img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
-        return img;
-    }
-
-    function renderRankEquip(profile, body) {
-        const equipped = Array.isArray(profile && profile.equipped) ? profile.equipped : [];
-        if (!equipped.length) {
-            body.append(uiEl('div', 'dnf-rp-empty', '没有装备数据'));
-            return;
-        }
-        const bySlot = new Map();
-        for (const it of equipped) if (it && it.slot) bySlot.set(it.slot, it);
-        const slots = EQUIP_SLOT_ORDER.slice();
-        for (const it of equipped) if (it && it.slot && slots.indexOf(it.slot) < 0) slots.push(it.slot);
-        for (const slot of slots) {
-            const it = bySlot.get(slot);
-            if (!it) continue;
-            const row = uiEl('div', 'dnf-rp-row');
-            row.append(profileIconEl(it.icon_path, it.icon_index));
-            row.append(uiEl('span', 'dnf-rp-slot', EQUIP_SLOT_LABELS[slot] || slot));
-            row.append(uiEl('span', 'dnf-rp-name', it.name || ''));
-            const plus = Number(it.amplify_stat ? it.amplify_level : it.enhance_level) || 0;
-            const rn = rarityNameOf(it.rarity);
-            row.append(uiEl('span', 'dnf-rp-meta', (rn ? rn + ' ' : '') + (plus > 0 ? '+' + plus : '')));
-            body.append(row);
-        }
-    }
-
-    function renderRankSkills(profile, body, passiveOnly) {
-        const list = passiveOnly
-            ? (Array.isArray(profile && profile.passives) ? profile.passives : [])
-            : (Array.isArray(profile && profile.skills) ? profile.skills : []);
-        if (!list.length) {
-            body.append(uiEl('div', 'dnf-rp-empty', passiveOnly ? '没有被动数据' : '没有技能数据'));
-            return;
-        }
-        const mkRow = (s) => {
-            const learned = Number(s.learned_level != null ? s.learned_level : s.eff_level) || 0;
-            const eff = Number(s.eff_level != null ? s.eff_level : learned) || 0;
-            const max = Number(s.max_level) || 0;
-            const row = uiEl('div', 'dnf-rp-row' + (learned > 0 ? '' : ' dim'));
-            row.append(profileIconEl(s.icon_path, s.icon_index));
-            row.append(uiEl('span', 'dnf-rp-name', s.name || ''));
-            if (s.passive_kind === 'tp') row.append(uiEl('span', 'dnf-rp-tag', 'TP'));
-            let meta = 'Lv.' + learned + '/' + max;
-            if (eff !== learned) meta += '（实际 ' + eff + '）';
-            row.append(uiEl('span', 'dnf-rp-meta', meta));
-            return row;
-        };
-
-        if (passiveOnly) {
-            const sorted = list.slice().sort((a, b) => {
-                const la = Number(a.learned_level) || 0;
-                const lb = Number(b.learned_level) || 0;
-                if ((la > 0) !== (lb > 0)) return la > 0 ? -1 : 1;
-                return (Number(a.req_level) || 0) - (Number(b.req_level) || 0) || (Number(a.id) || 0) - (Number(b.id) || 0);
-            });
-            for (const s of sorted) body.append(mkRow(s));
-            return;
-        }
-
-        for (const kind of SKILL_KIND_ORDER) {
-            const items = list.filter(s => s.kind === kind)
-                .sort((a, b) => (Number(a.req_level) || 0) - (Number(b.req_level) || 0) || (Number(a.id) || 0) - (Number(b.id) || 0));
-            if (!items.length) continue;
-            const group = uiEl('div', 'dnf-rp-group');
-            group.append(uiEl('div', 'dnf-rp-group-title', SKILL_KIND_LABELS[kind] || kind));
-            for (const s of items) group.append(mkRow(s));
-            body.append(group);
-        }
-        if (!body.childElementCount) {
-            for (const s of list) body.append(mkRow(s));
-        }
+        wrap.append(btn, hint);
+        box.insertAdjacentElement('afterend', wrap);
+        _nativeCopyEl = wrap;
+        _nativeCopyKey = key;
     }
 
     /** 阶段 0：拉双方数据，算差异、返还与消耗 */
