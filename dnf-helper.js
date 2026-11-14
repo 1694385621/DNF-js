@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      5.87
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）。
+// @version      5.88
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -243,7 +243,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '5.87';
+    const VERSION = '5.88';
 
     /**
      * 可持久化的用户设置白名单（只存这些，其它运行期配置不写盘）。
@@ -5007,10 +5007,12 @@
 
     /** ② 把「兑换码」搬进商店「通用制作」右侧（克隆转发点击） */
     function relocateRedeemButton(redeem) {
+        // v5.88：移动端顶栏「兑换码」始终隐藏，不等商店打开；
+        // 商店子标签里的克隆按原逻辑出现，克隆 click 仍转发给这个隐藏的原生按钮。
+        if (!redeem.hasAttribute('data-dnf-redeem-native')) markHidden(redeem, 'data-dnf-redeem-native');
+        // 原生按钮只隐藏不删除：克隆体 click 时还要靠它触发游戏自己的兑换码弹窗
         const produce = findGameButton('通用制作');
         if (!produce || !produce.parentElement) return;
-        // 原生按钮只隐藏不删除：克隆体 click 时还要靠它触发游戏自己的兑换码弹窗
-        if (!redeem.hasAttribute('data-dnf-redeem-native')) markHidden(redeem, 'data-dnf-redeem-native');
         const row = produce.parentElement;
         if (!_redeemCloneEl) {
             _redeemCloneEl = redeem.cloneNode(true);
@@ -5073,6 +5075,112 @@
         } catch (_) { }
     }
 
+    /* ============================================================
+     * 手动分解「获得物品」提示（v5.88）
+     * ------------------------------------------------------------
+     * 游戏分解成功后不展示产出，这里旁路读取服务端返回体（只读，不改请求/响应）：
+     *   单件 POST /api/characters/{id}/decompose        {instance_id}
+     *        → {item_name, outputs:[{item_id,count}], status:'decomposed'}
+     *   批量 POST /api/characters/{id}/decompose-batch  {instance_ids}
+     *        → {decomposed, outputs:[{item_id,count}], skipped:[], status}
+     * outputs 只有 item_id + count，物品名按 id 查 /api/items/{id}（带内存+localStorage 缓存）。
+     * 一次请求只弹一条 toast，按 item_id 累加数量；非 2xx / status 非 decomposed /
+     * outputs 为空时一律不提示。axios 走 XHR，因此 fetch 与 XHR 两条路径都挂。
+     * ============================================================ */
+    const DECOMP_NAME_KEY = 'dnf_item_names_v588';
+    let _decompNames = null;
+
+    function decompNameCache() {
+        if (_decompNames) return _decompNames;
+        try { _decompNames = JSON.parse(localStorage.getItem(DECOMP_NAME_KEY) || '{}') || {}; } catch (_) { _decompNames = {}; }
+        return _decompNames;
+    }
+    function saveDecompNames() {
+        try { localStorage.setItem(DECOMP_NAME_KEY, JSON.stringify(_decompNames || {})); } catch (_) { }
+    }
+    function decompToken() {
+        try { return localStorage.getItem('dnf_idle_token') || ''; } catch (_) { return ''; }
+    }
+    async function resolveItemName(itemId) {
+        const cache = decompNameCache();
+        if (cache[itemId]) return cache[itemId];
+        const token = decompToken();
+        if (!token) return '物品 ' + itemId;
+        try {
+            const r = await fetch('/api/items/' + itemId, { headers: { Authorization: 'Bearer ' + token } });
+            if (r.ok) {
+                const d = await r.json();
+                if (d && d.name) { cache[itemId] = d.name; saveDecompNames(); return d.name; }
+            }
+        } catch (_) { }
+        return '物品 ' + itemId;
+    }
+
+    async function showDecomposeGain(outputs) {
+        if (!Array.isArray(outputs) || !outputs.length) return;
+        const agg = new Map();
+        for (const o of outputs) {
+            const id = Number(o && o.item_id);
+            const n = Number(o && o.count) || 0;
+            if (!id || n <= 0) continue;
+            agg.set(id, (agg.get(id) || 0) + n);
+        }
+        if (!agg.size) return;
+        const parts = [];
+        for (const [id, n] of agg) parts.push((await resolveItemName(id)) + ' ×' + n);
+        showTip('分解获得：' + parts.join('、'));
+    }
+
+    /** 只认分解接口的成功响应；其它情况静默 */
+    function onDecomposeResponse(url, status, text) {
+        try {
+            if (!/\/decompose(-batch)?(\?|$)/.test(String(url || ''))) return;
+            if (!(status >= 200 && status < 300)) return;
+            const j = JSON.parse(text);
+            if (!j || typeof j !== 'object') return;
+            if (j.status && j.status !== 'decomposed') return;
+            showDecomposeGain(j.outputs);
+        } catch (_) { }
+    }
+
+    function initDecomposeGainToast() {
+        if (window.__dnfDecompGain588) return;
+        window.__dnfDecompGain588 = true;
+        // ① fetch（保险：万一某次分解改走 fetch）
+        if (typeof window.fetch === 'function') {
+            const origFetch = window.fetch;
+            window.fetch = function (input, init) {
+                const url = typeof input === 'string' ? input : (input && input.url) || '';
+                const p = origFetch.apply(this, arguments);
+                if (/\/decompose(-batch)?(\?|$)/.test(String(url))) {
+                    p.then(resp => {
+                        try {
+                            const clone = resp.clone();
+                            clone.text().then(txt => onDecomposeResponse(url, resp.status, txt)).catch(() => { });
+                        } catch (_) { }
+                    }).catch(() => { });
+                }
+                return p;
+            };
+        }
+        // ② XHR（axios 默认走这里）
+        const origOpen = XMLHttpRequest.prototype.open;
+        const origSend = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.open = function (method, url) {
+            this.__dnfDecompUrl = String(url || '');
+            return origOpen.apply(this, arguments);
+        };
+        XMLHttpRequest.prototype.send = function () {
+            const url = this.__dnfDecompUrl || '';
+            if (/\/decompose(-batch)?(\?|$)/.test(url)) {
+                this.addEventListener('load', () => {
+                    onDecomposeResponse(url, this.status, this.responseText);
+                });
+            }
+            return origSend.apply(this, arguments);
+        };
+    }
+
     function start() {
         // 防止脚本被重复注入（Tampermonkey 更新 / SPA 重载）后出现多套定时器
         if (window.__dnfHelperStarted) return;
@@ -5112,6 +5220,8 @@
         // 桌面端保持游戏原样，窗口缩放/横竖屏会即时回退或重新生效
         initGameUiTweakWatchers();
         applyGameUiTweaks();
+        // v5.88：旁路读取分解响应，用 toast 提示实际获得的材料
+        initDecomposeGainToast();
 
         // 1. 扫描分层，避免背包/装备列表渲染风暴拖慢加载：
         //  - runScans（全量）：只在 1s 定时轮询执行；含需要读取页面文本的检测
