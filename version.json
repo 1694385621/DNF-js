@@ -1,1 +1,1 @@
-{"version":"5.86","url":"https://ghproxy.net/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"更新检查改为多源（ghproxy→raw→jsDelivr）依次尝试，下载链接跟随实际成功源，避免 jsDelivr @main 缓存滞后与连接重置。"}
+{"version":"5.87","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"图鉴新增宝珠页：/api/orbs 全量 161 条，属性类型/可附魔部位/稀有度三级筛选，图标按 id 补齐并本地缓存。"}
