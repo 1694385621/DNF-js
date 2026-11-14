@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      5.86
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序。
+// @version      5.87
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -243,7 +243,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '5.86';
+    const VERSION = '5.87';
 
     /**
      * 可持久化的用户设置白名单（只存这些，其它运行期配置不写盘）。
@@ -4144,7 +4144,10 @@
     const ARMOR_DEFS = [['all', '全部甲种'], ['cloth', '布甲'], ['leather', '皮甲'], ['light', '轻甲'], ['heavy', '重甲'], ['plate', '板甲']];
     const JEWEL_DEFS = [['all', '全部'], ['wrist', '手镯'], ['amulet', '项链'], ['ring', '戒指']];
     const SPECIAL_DEFS = [['all', '全部'], ['magicstone', '魔法石'], ['support', '辅助装备']];
-    let state = { q:'', cat:'all', job:'all', part:'all', armor:'all', jewel:'all', special:'all', open:false, detail:null };
+    let state = { q:'', cat:'all', job:'all', part:'all', armor:'all', jewel:'all', special:'all', open:false, detail:null,
+        ostat:'all', oslot:'all', orar:'all' };
+    // v5.87：图鉴分「装备 / 宝珠」两页，默认仍停在装备
+    let atlasMode = 'equip';
 
     // ---------- 样式（对齐游戏内详情面板：暗棕金 + 紫色特效框） ----------
     function injectStyles() {
@@ -4221,6 +4224,14 @@
             .g85-effect-head{font-size:11px;font-weight:700;color:#c4a6ff}
             .g85-effect-line{font-size:12px;color:#d8c8ff;line-height:1.5}
             .g85-explain{font-size:11px;color:#b6a47e;white-space:pre-line;line-height:1.75;margin-top:8px;border-top:1px solid #3d3120;padding-top:7px}
+            .g85-tabs{flex:0 0 auto;display:flex;gap:4px;padding:6px 12px 0;background:#1b150e}
+            .g85-tab{padding:4px 12px;border:1px solid #5a4a2c;border-radius:4px 4px 0 0;cursor:pointer;
+                font-size:12px;color:#b6a47e;user-select:none;transition:all .12s ease}
+            .g85-tab:hover{color:#f0e7d2;border-color:#8a6f3d}
+            .g85-tab.on{color:#f5c542;background:#2e2516;border-color:#f5c542}
+            .g85-retry{margin-top:10px;padding:5px 14px;border-radius:4px;cursor:pointer;
+                border:1px solid #6b5633;background:#2e2516;color:#f5c542;font:12px/1.4 "Microsoft YaHei",sans-serif}
+            .g85-retry:hover{border-color:#f5c542}
         `;
         (document.head || document.documentElement).appendChild(st);
     }
@@ -4429,7 +4440,7 @@
         return c;
     }
 
-    function fillChips(wrap, defs, activeKey, onPick) {
+    function fillChips(wrap, defs, activeKey, onPick, after) {
         wrap.innerHTML = '';
         for (const [key, label] of defs) {
             makeChip(wrap, label, String(activeKey) === String(key), c => {
@@ -4437,7 +4448,7 @@
                 for (const x of wrap.querySelectorAll('.g85-chip')) x.classList.remove('on');
                 c.classList.add('on');
                 if (state.detail) backToList();
-                renderList();
+                (after || renderList)();
             });
         }
     }
@@ -4485,15 +4496,323 @@
         buildSub2Chips();
     }
 
+    /* ================= v5.87 宝珠图鉴 =================
+     * 数据：GET /api/orbs 一次拿全量（161 条，需 Bearer dnf_idle_token）；
+     * 图标：接口本身不带 icon_path，按 id 逐个 GET /api/items/{id} 取
+     *       icon_path + icon_index 拼 sprite 文件名，串行 60ms 间隔，结果进
+     *       localStorage（键 dnf_atlas_orbs_v587，带版本号 v:587，7 天过期）。
+     * 全部失败只影响宝珠页，装备页与其它功能不受影响。
+     * ================================================== */
+    const ORB_CACHE_KEY = 'dnf_atlas_orbs_v587';
+    const ORB_CACHE_VER = 587;
+    const ORB_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+    const ORB_ICON_GAP_MS = 60;
+
+    const ORB_STAT_LABEL = {
+        str: '力量', intel: '智力', vit: '体力', spr: '精神',
+        pAtkFlat: '物理攻击', mAtkFlat: '魔法攻击', pAtkPct: '物理攻击力', mAtkPct: '魔法攻击力',
+        pDefFlat: '物理防御', mDefFlat: '魔法防御', hpMax: '生命值上限', mpMax: '魔法值上限',
+        hpRegen: '生命值恢复', mpRegen: '魔法值恢复',
+        atkSpd: '攻击速度', castSpd: '施放速度', moveSpd: '移动速度',
+        elemEnh: '属性强化', elemRes: '属性抗性',
+        critP: '物理暴击', critM: '魔法暴击', crit: '暴击',
+        hitRate: '命中率', evasion: '回避率', dmgReduce: '伤害减免',
+    };
+    const ORB_PCT_KEYS = ['pAtkPct', 'mAtkPct', 'atkSpd', 'castSpd', 'moveSpd', 'elemEnh', 'elemRes',
+        'critP', 'critM', 'crit', 'hitRate', 'evasion', 'dmgReduce'];
+    const ORB_ELEM_LABEL = { fire: '火', light: '光', water: '水', dark: '暗', ice: '冰', all: '全' };
+    const ORB_SLOT_LABEL = {
+        weapon: '武器', coat: '上衣', pants: '下装', shoulder: '头肩', belt: '腰带', shoes: '鞋子',
+        wrist: '手镯', amulet: '项链', ring: '戒指', support: '辅助装备', 'title name': '称号',
+    };
+    const ORB_SLOT_DEFS = [['all', '全部部位'], ['weapon', '武器'], ['coat', '上衣'], ['pants', '下装'],
+        ['shoulder', '头肩'], ['belt', '腰带'], ['shoes', '鞋子'], ['wrist', '手镯'], ['amulet', '项链'],
+        ['ring', '戒指'], ['support', '辅助装备'], ['title name', '称号']];
+    const ORB_STAT_DEFS = [['all', '全部'], ['atk', '攻击'], ['mag', '魔法'], ['def', '防御'],
+        ['spd', '速度'], ['elem', '属性强化'], ['other', '其它']];
+    const ORB_STAT_GROUPS = {
+        atk: ['pAtkFlat', 'pAtkPct', 'ind', 'critP', 'crit'],
+        mag: ['mAtkFlat', 'mAtkPct', 'intel', 'spr', 'critM'],
+        def: ['pDefFlat', 'mDefFlat', 'hpMax', 'mpMax', 'hpRegen', 'mpRegen', 'vit', 'dmgReduce'],
+        spd: ['atkSpd', 'castSpd', 'moveSpd'],
+        elem: ['elemEnh', 'elemRes'],
+    };
+    const ORB_RARITY_LABEL = { 1: '稀有', 2: '稀有', 3: '神器' };
+    const ORB_RARITY_DEFS = [['all', '全部'], ['1', '稀有 1'], ['2', '稀有 2'], ['3', '神器 3']];
+
+    let orbList = null;
+    let orbState = { loading: false, error: '' };
+    let orbWraps = null;
+    let orbIconsRunning = false;
+
+    function orbStatLabel(k) { return ORB_STAT_LABEL[k] || k; }
+    function orbIsPct(k) { return ORB_PCT_KEYS.indexOf(k) !== -1; }
+    function orbSlotsText(o) { return (o.slots || []).map(s => ORB_SLOT_LABEL[s] || s).join('、'); }
+    function orbModLine(m) {
+        const elem = m.e ? '（' + (ORB_ELEM_LABEL[m.e] || m.e) + '属性）' : '';
+        return orbStatLabel(m.k) + elem + ' +' + m.v + (orbIsPct(m.k) ? '%' : '');
+    }
+    /** 与装备图鉴同一套 sprite 命名：item/x/y.img#12 → sprite_item_x_y_12.png */
+    function orbIconUrl(path, index) {
+        if (!path || index === undefined || index === null) return '';
+        return '/assets/icons/sprite_' + String(path).replace(/\.img$/i, '').replace(/\//g, '_').toLowerCase() + '_' + index + '.png';
+    }
+    function orbToken() {
+        try { return localStorage.getItem('dnf_idle_token') || ''; } catch (_) { return ''; }
+    }
+    function readOrbCache() {
+        try {
+            const c = JSON.parse(localStorage.getItem(ORB_CACHE_KEY) || 'null');
+            if (!c || c.v !== ORB_CACHE_VER || !Array.isArray(c.items) || !c.items.length) return null;
+            if (!Number.isFinite(c.at) || Date.now() - c.at > ORB_CACHE_TTL) return null;
+            return c;
+        } catch (_) { return null; }
+    }
+    function writeOrbCache() {
+        if (!orbList) return;
+        try {
+            localStorage.setItem(ORB_CACHE_KEY, JSON.stringify({ v: ORB_CACHE_VER, at: Date.now(), items: orbList }));
+        } catch (_) { }
+    }
+    function orbSleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    function orbMatchesStat(o, group) {
+        const mods = o.mods || [];
+        if (group === 'other') {
+            return mods.some(m => {
+                for (const g of ['atk', 'mag', 'def', 'spd', 'elem']) {
+                    if (ORB_STAT_GROUPS[g].indexOf(m.k) !== -1) return false;
+                }
+                return true;
+            });
+        }
+        const keys = ORB_STAT_GROUPS[group] || [];
+        return mods.some(m => keys.indexOf(m.k) !== -1);
+    }
+
+    function orbFiltered() {
+        const arr = orbList || [];
+        const q = state.q.trim().toLowerCase();
+        return arr.filter(o => {
+            if (state.orar !== 'all' && String(o.rarity) !== String(state.orar)) return false;
+            if (state.oslot !== 'all' && (o.slots || []).indexOf(state.oslot) === -1) return false;
+            if (state.ostat !== 'all' && !orbMatchesStat(o, state.ostat)) return false;
+            if (!q) return true;
+            const hay = [o.name, orbSlotsText(o),
+                (o.mods || []).map(m => orbStatLabel(m.k) + ' ' + m.k + ' ' + m.v).join(' ')].join(' ').toLowerCase();
+            return hay.indexOf(q) !== -1;
+        });
+    }
+
+    function renderOrbEmpty(text, withRetry) {
+        listEl.innerHTML = '<div class="g85-empty"><div class="g85-orberr"></div>' +
+            (withRetry ? '<button class="g85-retry" type="button">重新加载</button>' : '') + '</div>';
+        const msg = listEl.querySelector('.g85-orberr');
+        if (msg) msg.textContent = text;
+        const btn = listEl.querySelector('.g85-retry');
+        if (btn) btn.addEventListener('click', () => loadOrbs(true));
+    }
+
+    function renderOrbList() {
+        if (!listEl || atlasMode !== 'orb') return;
+        if (!orbList) {
+            if (orbState.loading) {
+                if (countEl) countEl.textContent = '加载中';
+                renderOrbEmpty('正在读取宝珠数据…', false);
+            } else {
+                if (countEl) countEl.textContent = '—';
+                renderOrbEmpty(orbState.error || '宝珠数据暂不可用', true);
+            }
+            return;
+        }
+        const arr = orbFiltered();
+        if (countEl) countEl.textContent = arr.length + ' / ' + orbList.length;
+        listEl.innerHTML = '';
+        if (!arr.length) {
+            listEl.innerHTML = '<div class="g85-empty">没有匹配的宝珠</div>';
+            return;
+        }
+        for (const o of arr) {
+            const div = document.createElement('div');
+            div.className = 'g85-item';
+            div.innerHTML = (o.icon ? '<img loading="lazy" alt="">' : '<div class="g85-ph">?</div>') +
+                '<div style="min-width:0;flex:1 1 auto"><div class="g85-nm"></div><div class="g85-meta"></div></div>' +
+                '<div class="g85-lv"></div>';
+            const img = div.querySelector('img');
+            if (img) img.src = o.icon;
+            div.querySelector('.g85-nm').textContent = o.name;
+            const first = (o.mods || [])[0];
+            div.querySelector('.g85-meta').textContent = orbSlotsText(o) + (first ? '　' + orbModLine(first) : '　无属性');
+            div.querySelector('.g85-lv').textContent = ORB_RARITY_LABEL[o.rarity] || ('R' + o.rarity);
+            div.addEventListener('click', () => openOrbDetail(o));
+            listEl.appendChild(div);
+        }
+    }
+
+    function openOrbDetail(o) {
+        state.detail = { orb: o };
+        listEl.classList.add('hide');
+        detailEl.classList.add('show');
+        const slots = orbSlotsText(o);
+        const head = [];
+        if (slots) head.push('可附魔部位：' + slots);
+        if (o.price) head.push('价格：' + o.price + ' 金币');
+        if (o.ind) head.push('独立攻击力 +' + o.ind);
+        const mods = (o.mods || []).map(orbModLine);
+        let html = '<div class="g85-back">← 返回列表</div>' +
+            '<div class="g85-dhead">' + (o.icon ? '<img alt="">' : '<div class="g85-ph" style="width:46px;height:46px">?</div>') +
+            '<div><div class="g85-dname"></div><div class="g85-dsub"></div></div></div>';
+        if (head.length) {
+            html += '<div class="g85-attrs">' + head.map(s => '<div class="g85-line">' + esc(s) + '</div>').join('') + '</div>';
+        }
+        if (mods.length) {
+            html += '<div class="g85-effect"><div class="g85-effect-head">附魔属性</div>' +
+                mods.map(s => '<div class="g85-effect-line">' + esc(s) + '</div>').join('') + '</div>';
+        }
+        const elems = (o.elems || []).map(e => ORB_ELEM_LABEL[e] || e);
+        if (elems.length) {
+            html += '<div class="g85-attrs"><div class="g85-line">元素属性：' + esc(elems.join('、')) + '</div></div>';
+        }
+        detailEl.innerHTML = html;
+        const dImg = detailEl.querySelector('.g85-dhead img');
+        if (dImg) dImg.src = o.icon;
+        detailEl.querySelector('.g85-dname').textContent = o.name;
+        detailEl.querySelector('.g85-dsub').textContent =
+            (ORB_RARITY_LABEL[o.rarity] || ('稀有度 ' + o.rarity)) + ' · 宝珠';
+        detailEl.querySelector('.g85-back').addEventListener('click', backToList);
+        detailEl.scrollTop = 0;
+    }
+
+    /** 串行补图标：每 20 个落一次缓存并刷新列表，避免一次性 161 个请求打满 */
+    async function fetchOrbIcons() {
+        if (orbIconsRunning || !orbList) return;
+        const token = orbToken();
+        if (!token) return;
+        const todo = orbList.filter(o => !o.icon);
+        if (!todo.length) return;
+        orbIconsRunning = true;
+        try {
+            let n = 0;
+            for (const o of todo) {
+                try {
+                    const r = await fetch('/api/items/' + o.id, { headers: { Authorization: 'Bearer ' + token } });
+                    if (r.ok) {
+                        const d = await r.json();
+                        o.icon = orbIconUrl(d.icon_path, d.icon_index);
+                    }
+                } catch (_) { }
+                n++;
+                if (n % 20 === 0) { writeOrbCache(); if (atlasMode === 'orb' && !state.detail) renderOrbList(); }
+                await orbSleep(ORB_ICON_GAP_MS);
+            }
+            writeOrbCache();
+        } finally {
+            orbIconsRunning = false;
+            if (atlasMode === 'orb' && !state.detail) renderOrbList();
+        }
+    }
+
+    async function loadOrbs(force) {
+        if (orbState.loading) return;
+        if (!force) {
+            const c = readOrbCache();
+            if (c) {
+                orbList = c.items;
+                orbState = { loading: false, error: '' };
+                renderOrbList();
+                fetchOrbIcons();
+                return;
+            }
+        }
+        const token = orbToken();
+        if (!token) {
+            orbList = null;
+            orbState = { loading: false, error: '宝珠数据需要登录后加载（未检测到登录凭据）' };
+            renderOrbList();
+            return;
+        }
+        orbState = { loading: true, error: '' };
+        renderOrbList();
+        try {
+            const r = await fetch('/api/orbs', { headers: { Authorization: 'Bearer ' + token } });
+            if (!r.ok) throw new Error('接口返回 HTTP ' + r.status);
+            const j = await r.json();
+            const rows = j && Array.isArray(j.orbs) ? j.orbs : [];
+            if (!rows.length) throw new Error('接口未返回宝珠数据');
+            const old = readOrbCache();
+            const iconMap = {};
+            if (old) for (const x of old.items) if (x.icon) iconMap[x.id] = x.icon;
+            orbList = rows.map(x => ({
+                id: x.id, name: x.name, rarity: x.rarity, price: x.price,
+                slots: x.slots || [], mods: x.mods || [], ind: x.ind || 0, elems: x.elems || [],
+                icon: iconMap[x.id] || '',
+            }));
+            orbState = { loading: false, error: '' };
+            writeOrbCache();
+            renderOrbList();
+            fetchOrbIcons();
+        } catch (e) {
+            orbList = null;
+            orbState = { loading: false, error: '宝珠数据加载失败：' + ((e && e.message) || '网络异常') };
+            renderOrbList();
+        }
+    }
+
+    function buildOrbChips() {
+        if (!orbWraps) return;
+        const afterOrb = () => { if (state.detail) backToList(); renderOrbList(); };
+        fillChips(orbWraps.stat, ORB_STAT_DEFS, state.ostat, key => { state.ostat = key; }, afterOrb);
+        fillChips(orbWraps.slot, ORB_SLOT_DEFS, state.oslot, key => { state.oslot = key; }, afterOrb);
+        fillChips(orbWraps.rar, ORB_RARITY_DEFS, state.orar, key => { state.orar = key; }, afterOrb);
+    }
+
+    /** 切换装备 / 宝珠两页：只改显隐与数据源，装备页筛选状态原样保留 */
+    function applyAtlasMode(root) {
+        // buildPanel 里 panel 还没赋值，用传入的 root；其余场景用全局 panel
+        const scope = root || panel;
+        if (!scope) return;
+        const eq = atlasMode !== 'orb';
+        if (catWrap) catWrap.style.display = eq ? 'flex' : 'none';
+        if (subWrap) subWrap.style.display = eq && state.cat !== 'all' ? 'flex' : 'none';
+        if (sub2Wrap) sub2Wrap.style.display = eq && state.cat === 'armor' ? 'flex' : 'none';
+        if (orbWraps) {
+            orbWraps.stat.style.display = eq ? 'none' : 'flex';
+            orbWraps.slot.style.display = eq ? 'none' : 'flex';
+            orbWraps.rar.style.display = eq ? 'none' : 'flex';
+        }
+        for (const tab of scope.querySelectorAll('.g85-tab')) {
+            tab.classList.toggle('on', tab.getAttribute('data-mode') === atlasMode);
+        }
+        if (searchEl) searchEl.placeholder = eq ? '搜索名字 / 类型…' : '搜索名字 / 属性…';
+        if (state.detail) backToList();
+        if (eq) renderList();
+        else {
+            if (!orbList && !orbState.loading) loadOrbs(false);
+            renderOrbList();
+        }
+    }
+
+    function switchAtlasMode(m) {
+        if (atlasMode === m) return;
+        atlasMode = m;
+        state.q = '';
+        if (searchEl) searchEl.value = '';
+        applyAtlasMode();
+    }
+
     function buildPanel() {
         const p = document.createElement('div');
         p.className = 'g85-panel';
         p.style.display = 'none';
         p.innerHTML = '<div class="g85-head"><b>史诗图鉴</b><span class="g85-count"></span><button class="g85-x" data-no-drag type="button" title="关闭">×</button></div>' +
+            '<div class="g85-tabs"><div class="g85-tab on" data-mode="equip">装备</div><div class="g85-tab" data-mode="orb">宝珠</div></div>' +
             '<div class="g85-search"><input placeholder="搜索名字 / 类型…" autocomplete="off"></div>' +
             '<div class="g85-chips g85-cats"></div>' +
             '<div class="g85-chips g85-sub"></div>' +
             '<div class="g85-chips g85-sub2"></div>' +
+            '<div class="g85-chips g85-ostat" style="display:none"></div>' +
+            '<div class="g85-chips g85-oslot" style="display:none"></div>' +
+            '<div class="g85-chips g85-orar" style="display:none"></div>' +
             '<div class="g85-list"></div>' +
             '<div class="g85-detail"></div>';
         document.body.appendChild(p);
@@ -4505,6 +4824,14 @@
         sub2Wrap = p.querySelector('.g85-sub2');
         countEl = p.querySelector('.g85-count');
         searchEl = p.querySelector('.g85-search input');
+        orbWraps = {
+            stat: p.querySelector('.g85-ostat'),
+            slot: p.querySelector('.g85-oslot'),
+            rar: p.querySelector('.g85-orar'),
+        };
+        for (const tab of p.querySelectorAll('.g85-tab')) {
+            tab.addEventListener('click', () => switchAtlasMode(tab.getAttribute('data-mode')));
+        }
 
         makeDraggable(p, p.querySelector('.g85-head'));
         const closeBtn = p.querySelector('.g85-x');
@@ -4515,7 +4842,7 @@
         searchEl.addEventListener('input', () => {
             state.q = searchEl.value;
             if (state.detail) backToList();
-            renderList();
+            if (atlasMode === 'orb') renderOrbList(); else renderList();
         });
         buildCatChips();
         buildSubChips();
@@ -4523,7 +4850,11 @@
         makeChipsDraggable(subWrap);
         makeChipsDraggable(sub2Wrap);
         syncSubRows();
-        renderList();
+        buildOrbChips();
+        makeChipsDraggable(orbWraps.stat);
+        makeChipsDraggable(orbWraps.slot);
+        makeChipsDraggable(orbWraps.rar);
+        applyAtlasMode(p);
 
         const pos = loadPos();
         if (pos) {
@@ -4544,6 +4875,7 @@
             if (!panel) panel = buildPanel();
             if (capsule) capsule.style.display = 'none';
             panel.style.display = 'flex';
+            if (atlasMode === 'orb' && !orbList && !orbState.loading) loadOrbs(false);
             if (state.detail === null) {
                 listEl.classList.remove('hide');
                 detailEl.classList.remove('show');
