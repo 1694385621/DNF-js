@@ -1,1 +1,1 @@
-{"version":"5.94","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"清理 v5.93 遗留的死代码：删除已不再渲染的排行榜三页面板（openRankProfilePanel/renderRankProfile/renderRankEquip/renderRankSkills/profileIconEl/closeRankProfilePanel/_rankPanelEl）及其独占常量、图标地址工具和 CSS；复制技能按钮与两段式复制流程完全不变。图鉴、宝箱全开、存仓、分解等功能未改动。"}
+{"version":"5.96","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"收益弹窗改为只展示本次结果（出售件数与金币、按品质分组、分解产物），移除今日累计与本地统计；装备详情页分解也改用同一收益弹窗，替换原助手 toast，其余逻辑不变。"}
