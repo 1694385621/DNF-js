@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      5.96
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，功能框固定，手机单列与桌面三栏行为不变）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；装备详情页分解也走同一弹窗，替换原 toast）。
+// @version      5.97
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，功能框固定，手机单列与桌面三栏行为不变）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；装备详情页分解也走同一弹窗，替换原 toast）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -264,7 +264,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '5.96';
+    const VERSION = '5.97';
 
     /**
      * 游戏接口 GET 统一超时（v5.90）
@@ -3603,7 +3603,23 @@
         return Object.assign({}, item, { kind: 'equipment' });
     }
 
-    /** 由格子反查装备：优先按 DOM 顺序对齐 warehouseEquipFiltered，失败再用 title 匹配 */
+    /** v5.97：名字规范化（去掉所有空白），用于跨端空格差异的二次校验 */
+    function normWarehouseName(s) {
+        return String(s || '').replace(/\s+/g, '');
+    }
+    /** v5.97：图标键（icon_path + icon_index），与格子 img 的 sprite 文件名一致 */
+    function warehouseIconKey(path, index) {
+        return String(path || '').toLowerCase().replace(/\.img$/, '').replace(/\//g, '_')
+            + '_' + (Number(index) || 0);
+    }
+    function warehouseCellIconKey(cell) {
+        const img = cell && cell.querySelector ? cell.querySelector('img') : null;
+        const src = img ? String(img.getAttribute('src') || '') : '';
+        const m = /sprite_([a-z0-9_]+?)\.png$/i.exec(src);
+        return m ? m[1].toLowerCase() : '';
+    }
+
+    /** 由格子反查装备：优先按「渲染同源列表」的下标取 instance_id，失败再用规范化名字/存入者 */
     function warehouseEquipFromCell(store, cell) {
         if (!store) return null;
         const wh = store.warehouse ? store.warehouse.value : null;
@@ -3614,18 +3630,25 @@
         if (!list.length) return null;
 
         const title = cell.getAttribute('title') || '';
-        const name = title.split('（存入者：')[0].trim();
+        const name = normWarehouseName(title.split('（存入者：')[0]);
+        const ownerMatch = /（存入者：([^，]*)，/.exec(title);
+        const owner = ownerMatch ? ownerMatch[1].trim() : '';
         const grid = cell.parentElement;
+        const gridCount = grid ? grid.children.length : 0;
+
         if (grid) {
             const idx = Array.prototype.indexOf.call(grid.children, cell);
             const hit = idx >= 0 ? list[idx] : null;
-            if (hit && Number(hit.instance_id) > 0 && (!name || hit.name === name)) {
-                return asWarehouseEquip(hit);
+            if (hit && Number(hit.instance_id) > 0) {
+                const sameName = !name || normWarehouseName(hit.name) === name;
+                const sameOwner = !owner || !hit.owner_name || String(hit.owner_name).trim() === owner;
+                // 同源下标（网格数量与列表一致）即可信；否则要求名字或存入者至少一项吻合
+                if (sameName || sameOwner || gridCount === list.length) return asWarehouseEquip(hit);
             }
         }
-        const ownerMatch = /（存入者：([^，]*)，/.exec(title);
-        const owner = ownerMatch ? ownerMatch[1] : '';
-        const found = list.find(x => x && x.name === name && (!owner || !x.owner_name || x.owner_name === owner));
+        const found = list.find(x => x && Number(x.instance_id) > 0
+            && normWarehouseName(x.name) === name
+            && (!owner || !x.owner_name || String(x.owner_name).trim() === owner));
         return found ? asWarehouseEquip(found) : null;
     }
 
@@ -3666,14 +3689,15 @@
             const title = cell.getAttribute('title') || '';
             if (title.indexOf('（存入者：') === -1) return;
 
-            // 先阻断，Vue 绑定在格子上的 warehouseEquipWithdraw 不会再执行
+            // v5.97：先确定装备，成功后才阻断；解析失败交给原生点击
+            const store = getGameStore();
+            const item = warehouseEquipFromCell(store, cell);
+            if (!item) return;
+
+            // 阻断 Vue 绑定在格子上的 warehouseEquipWithdraw，走插件详情流程
             e.preventDefault();
             e.stopImmediatePropagation();
             e.stopPropagation();
-
-            const store = getGameStore();
-            const item = warehouseEquipFromCell(store, cell);
-            if (!item) { showTip('无法读取该装备信息，请刷新页面后重试'); return; }
             if (!openWarehouseEquipDetail(store, item)) showTip('打开装备详情失败，请刷新页面后重试');
         }, true);
 
@@ -3843,24 +3867,51 @@
         _whMatQtyMask = null;
     }
 
-    /** 从仓库材料格子反查 store.warehouse.items 里的条目 */
+    /** 从仓库道具格子反查条目：以「渲染同源列表」的格子下标为主，名字/图标仅作校验 */
     function warehouseMaterialFromCell(store, cell) {
-        const wh = store && store.warehouse ? store.warehouse.value : null;
-        const list = wh && Array.isArray(wh.items) ? wh.items : [];
-        if (!list.length) return null;
+        if (!store) return null;
+        const wh = store.warehouse ? store.warehouse.value : null;
+        const all = wh && Array.isArray(wh.items) ? wh.items.filter(x => x && x.item_id) : [];
+        if (!all.length) return null;
+        // 游戏渲染用的是 whItemsFiltered（受「材料/消耗品」子标签筛选影响），必须同源取下标
+        const filtered = store.whItemsFiltered ? store.whItemsFiltered.value : null;
+        const list = Array.isArray(filtered) && filtered.length
+            ? filtered.filter(x => x && x.item_id)
+            : all;
         const title = cell.getAttribute('title') || '';
-        const name = title.split('×')[0].trim();
-
-        // 优先按格子在同组中的位置取（材料网格与 items 顺序一致）
+        // v5.97：数量从末尾「×N（点击取出）」提取，名字不再按 × 切分（防名字自带 ×）
+        const name = normWarehouseName(title.replace(/×\d+\s*（点击取出）\s*$/, ''));
+        const icon = warehouseCellIconKey(cell);
         const grid = cell.parentElement;
+        const gridCount = grid ? grid.children.length : 0;
+
         if (grid) {
             const idx = Array.prototype.indexOf.call(grid.children, cell);
             const hit = idx >= 0 ? list[idx] : null;
-            if (hit && hit.item_id && (!name || !hit.name || hit.name === name)) return hit;
+            if (hit) {
+                const sameName = !name || normWarehouseName(hit.name) === name;
+                const sameIcon = !icon || warehouseIconKey(hit.icon_path, hit.icon_index) === icon;
+                // 同源下标（网格数量与列表一致）即可信；否则要求名字或图标至少一项吻合
+                if (sameName || sameIcon || gridCount === list.length) return hit;
+            }
         }
-        // 退路：按名字唯一匹配
-        const named = list.filter(x => x && x.item_id && x.name === name);
+        // 兜底 1：规范化名字（唯一命中）
+        const named = list.filter(x => normWarehouseName(x.name) === name);
         if (named.length === 1) return named[0];
+        // 兜底 2：图标（唯一命中）
+        if (icon) {
+            const byIcon = list.filter(x => warehouseIconKey(x.icon_path, x.icon_index) === icon);
+            if (byIcon.length === 1) return byIcon[0];
+        }
+        // 兜底 3：筛选列表与全量不一致时，再在仓库全量里按名字/图标找一次
+        if (list !== all) {
+            const namedAll = all.filter(x => normWarehouseName(x.name) === name);
+            if (namedAll.length === 1) return namedAll[0];
+            if (icon) {
+                const iconAll = all.filter(x => warehouseIconKey(x.icon_path, x.icon_index) === icon);
+                if (iconAll.length === 1) return iconAll[0];
+            }
+        }
         return null;
     }
 
@@ -3884,7 +3935,7 @@
 
         const sub = document.createElement('div');
         sub.className = 'dnf-qty-sub';
-        sub.textContent = (item.name || '材料') + ' · 仓库持有 ' + held;
+        sub.textContent = String(item.name || '材料').trim() + ' · 仓库持有 ' + held;
 
         const row = document.createElement('div');
         row.className = 'dnf-qty-row';
@@ -4009,14 +4060,16 @@
             if (!node) return;
             const title = node.getAttribute('title') || '';
             if (title.indexOf('（存入者：') !== -1) return;          // 装备走 v5.77 详情流程
-            if (title.indexOf('（点击取出）') === -1) return;        // 只拦仓库材料
+            if (title.indexOf('（点击取出）') === -1) return;        // 只拦仓库道具
+
+            // v5.97：先确定物品，成功后才阻断；解析失败交给原生点击（整组取出）
+            const store = getGameStore();
+            const item = warehouseMaterialFromCell(store, node);
+            if (!item) return;
+
             e.preventDefault();
             e.stopImmediatePropagation();
             e.stopPropagation();
-
-            const store = getGameStore();
-            const item = warehouseMaterialFromCell(store, node);
-            if (!item) { showTip('无法读取该材料信息，请刷新页面后重试'); return; }
             openWarehouseMaterialQty(store, item);
         }, true);
 
