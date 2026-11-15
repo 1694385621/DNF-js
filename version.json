@@ -1,1 +1,1 @@
-{"version":"5.96","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"收益弹窗改为只展示本次结果（出售件数与金币、按品质分组、分解产物），移除今日累计与本地统计；装备详情页分解也改用同一收益弹窗，替换原助手 toast，其余逻辑不变。"}
+{"version":"5.97","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"修复仓库带前后空格道具（如增幅券）无法取出：改为按渲染同源列表 whItemsFiltered / warehouseEquipFiltered 的下标取 item_id / instance_id，名字规范化与图标仅作校验；解析失败不再吞点击，交回原生；装备二次确认与材料自选数量行为不变。"}
