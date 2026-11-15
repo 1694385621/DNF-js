@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      5.94
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账）。
+// @version      5.96
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，功能框固定，手机单列与桌面三栏行为不变）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；装备详情页分解也走同一弹窗，替换原 toast）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -157,24 +157,45 @@
         refreshSettingsPanel();
     }
 
-    /** 视口变化时重算设置面板（只挂一次） */
+    /** 视口变化时重算设置面板（只挂一次）；v5.95：跨断点自动重绘模块顺序入口 */
     function applySettingsPanelResizeHook() {
         if (window.__dnfSettingsResizeHook579) return;
         window.__dnfSettingsResizeHook579 = true;
-        window.addEventListener('resize', refreshSettingsPanel, { passive: true });
+        let lastMode = moduleLayoutMode();
+        const onLayoutModeChange = () => {
+            const mode = moduleLayoutMode();
+            if (mode === lastMode) return;
+            lastMode = mode;
+            lastModuleOrderSig = '';   // 强制按新模式重算排序样式
+            applyModuleOrder();
+            renderSettingsPanel();
+        };
+        window.addEventListener('resize', () => {
+            refreshSettingsPanel();
+            onLayoutModeChange();
+        }, { passive: true });
         window.addEventListener('orientationchange', () => {
             setTimeout(refreshSettingsPanel, 60);
             setTimeout(refreshSettingsPanel, 300);
+            setTimeout(onLayoutModeChange, 120);
         }, { passive: true });
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', refreshSettingsPanel, { passive: true });
         }
+        const watch = (query) => {
+            if (typeof window.matchMedia !== 'function') return;
+            const mq = window.matchMedia(query);
+            if (mq.addEventListener) mq.addEventListener('change', onLayoutModeChange);
+            else if (mq.addListener) mq.addListener(onLayoutModeChange);
+        };
+        watch('(max-width: 760px)');
+        watch('(min-width: 761px) and (max-width: 1200px)');
     }
     function renderSettingsPanel() {
         if(!settingsPanelEl?.isConnected)return;
         const body=settingsPanelEl.querySelector('.dnf-settings-body');
         const options=[['屏蔽挂机浮窗','hideGameAssistant','隐藏游戏原生挂机浮窗/折叠球（可恢复）'],['功能栏下移','relocateTabsAfterSettlement','功能栏放到最近结算下方'],['特性技能过滤','hideUnlearnedSkills','只显示已学前置的特性'],['统一 UI 主题','uiTheme','深色底、金色边框'],['诊断信息','debugHud','显示血条同步状态'],['启动时自动检查更新','autoCheckUpdate','读 version.json，只提示不自动安装']];
-        body.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:8px">'+options.map(args=>'<div style="padding:8px 10px;border:1px solid #56422f;border-radius:8px;background:#2b2118">'+renderSettingsRow(...args)+'</div>').join('')+'</div>'+(isMobileLayout()?'<div style="margin-top:12px">'+renderModuleOrderRows()+'</div>':'')+renderUpdateBlock();
+        body.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:8px">'+options.map(args=>'<div style="padding:8px 10px;border:1px solid #56422f;border-radius:8px;background:#2b2118">'+renderSettingsRow(...args)+'</div>').join('')+'</div>'+(moduleLayoutMode()!=='desktop'?'<div style="margin-top:12px">'+renderModuleOrderRows()+'</div>':'')+renderUpdateBlock();
         body.querySelectorAll('[data-setkey]').forEach(el=>{el.setAttribute('role','switch');el.tabIndex=0;el.setAttribute('aria-checked',String(CONFIG[el.dataset.setkey]));el.setAttribute('aria-label',options.find(o=>o[1]===el.dataset.setkey)[0]);el.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();el.click();}});});
         bindSettingsToggles(body);
     }
@@ -243,7 +264,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '5.94';
+    const VERSION = '5.96';
 
     /**
      * 游戏接口 GET 统一超时（v5.90）
@@ -267,18 +288,34 @@
      */
     const SETTING_KEYS = ['relocateTabsAfterSettlement', 'hudCorner', 'hudPos', 'hudDock', 'uiTheme', 'debugHud', 'moduleOrder', 'hideUnlearnedSkills', 'hideGameAssistant', 'hudCollapsed', 'autoCheckUpdate'];
 
-    /** 移动端可自定义上下顺序的六大模块 */
+    /** 可自定义上下顺序的六大模块（v5.95：按栏分组，跨栏不可移动） */
     const MODULE_DEFS = [
-        { key: 'char', label: '人物框', sel: '.main .doll-panel' },
-        { key: 'status', label: '状态框', sel: '.main .resource-panel' },
-        { key: 'dungeon', label: '地图怪物框', sel: '.main .panel.dungeon' },
-        { key: 'settle', label: '结算框', sel: '.main .panel.settle' },
-        { key: 'log', label: '日志框', sel: '.main .panel.battle-log' },
-        { key: 'tabs', label: '功能框', sel: '.main .right-col' },
+        { key: 'char', label: '人物框', sel: '.main .doll-panel', group: 'left' },
+        { key: 'status', label: '状态框', sel: '.main .resource-panel', group: 'left' },
+        { key: 'dungeon', label: '地图怪物框', sel: '.main .panel.dungeon', group: 'center' },
+        { key: 'settle', label: '结算框', sel: '.main .panel.settle', group: 'center' },
+        { key: 'log', label: '日志框', sel: '.main .panel.battle-log', group: 'center' },
+        // 功能框固定，不参与排序
+        { key: 'tabs', label: '功能框', sel: '.main .right-col', group: 'tabs' },
     ];
+    const MODULE_GROUP_KEYS = {
+        left: ['char', 'status'],
+        center: ['dungeon', 'settle', 'log'],
+    };
     const MODULE_DEFAULT_ORDER = MODULE_DEFS.map(d => d.key);
     const isMobileLayout = () =>
         (typeof window.matchMedia === 'function' ? window.matchMedia('(max-width: 760px)').matches : false);
+    /** 平板区间：游戏保持两栏（300px + 1fr），只允许栏内排序 */
+    const isTabletLayout = () =>
+        (typeof window.matchMedia === 'function'
+            ? window.matchMedia('(min-width: 761px) and (max-width: 1200px)').matches
+            : false);
+    /** 布局模式：mobile（单列可跨栏）/ tablet（两栏栏内）/ desktop（不排序） */
+    function moduleLayoutMode() {
+        if (isMobileLayout()) return 'mobile';
+        if (isTabletLayout()) return 'tablet';
+        return 'desktop';
+    }
 
     /** 当前识别到的角色名（null 表示还没进 GameView） */
     let currentCharName = null;
@@ -544,9 +581,27 @@
         return out;
     }
 
-    /** 上移/下移一个模块，返回是否发生变化 */
+    /** 上移/下移一个模块，返回是否发生变化（平板只允许同栏内交换） */
     function moveModule(key, dir) {
         const order = normalizedModuleOrder();
+        const mode = moduleLayoutMode();
+        if (mode === 'desktop') return false;
+        if (mode === 'tablet') {
+            const def = MODULE_DEFS.find(d => d.key === key);
+            const groupKeys = def && MODULE_GROUP_KEYS[def.group];
+            if (!groupKeys) return false;           // 功能框固定
+            const inGroup = order.filter(k => groupKeys.indexOf(k) !== -1);
+            const vi = inGroup.indexOf(key);
+            if (vi < 0) return false;
+            const tj = dir === 'up' ? vi - 1 : vi + 1;
+            if (tj < 0 || tj >= inGroup.length) return false;
+            const other = inGroup[tj];
+            const a = order.indexOf(key), b = order.indexOf(other);
+            order[a] = other;
+            order[b] = key;
+            CONFIG.moduleOrder = order;
+            return true;
+        }
         const i = order.indexOf(key);
         if (i < 0) return false;
         const j = dir === 'up' ? i - 1 : i + 1;
@@ -557,38 +612,101 @@
         return true;
     }
 
+    function setModuleOrderStyle(sel, value) {
+        const el = document.querySelector(sel);
+        if (!el) return false;
+        const target = value ? String(value) : '';
+        if (el.style.order === target) return false;
+        el.style.order = target;
+        return true;
+    }
+
     function applyModuleOrder() {
         const main = document.querySelector('.main');
         if (!main) return;
-        const mobile = isMobileLayout();
+        const mode = moduleLayoutMode();
         const order = normalizedModuleOrder();
-        // 默认顺序不改布局，保持游戏原生滚动体验；只有自定义顺序才启用堆叠
-        const stack = mobile && order.join(',') !== MODULE_DEFAULT_ORDER.join(',');
-        const sig = stack ? ('stack:' + order.join(',')) : 'off';
+        const buffSel = '.main .buff-panel';
+
+        if (mode === 'desktop') {
+            // 桌面三栏：清掉全部排序样式，保持游戏原生
+            if (lastModuleOrderSig === 'off') return;
+            lastModuleOrderSig = 'off';
+            main.classList.remove('dnf-mod-stack');
+            MODULE_DEFS.forEach(d => setModuleOrderStyle(d.sel, ''));
+            setModuleOrderStyle(buffSel, '');
+            return;
+        }
+
+        if (mode === 'mobile') {
+            // 手机单列：沿用 v5.91 起的跨栏堆叠
+            const stack = order.join(',') !== MODULE_DEFAULT_ORDER.join(',');
+            const sig = stack ? ('mobile:' + order.join(',')) : 'mobile:default';
+            if (sig === lastModuleOrderSig) {
+                const needFix = (stack !== main.classList.contains('dnf-mod-stack'))
+                    || (stack && order.some((key, i) => {
+                        const def = MODULE_DEFS.find(d => d.key === key);
+                        const el = def && document.querySelector(def.sel);
+                        return !!el && el.style.order !== String((i + 1) * 10);
+                    }));
+                if (!needFix) return;
+            }
+            lastModuleOrderSig = sig;
+            if (stack) main.classList.add('dnf-mod-stack');
+            else main.classList.remove('dnf-mod-stack');
+
+            order.forEach((key, i) => {
+                const def = MODULE_DEFS.find(d => d.key === key);
+                if (def) setModuleOrderStyle(def.sel, stack ? String((i + 1) * 10) : '');
+            });
+            // 「增益效果」面板没有单独开放排序，固定跟随「地图怪物框」其后
+            const buff = document.querySelector(buffSel);
+            if (buff) {
+                const di = order.indexOf('dungeon');
+                buff.style.order = stack ? String((di + 1) * 10 + 1) : '';
+            }
+            return;
+        }
+
+        // 平板两栏：不堆叠、不 display:contents，只在左栏/中栏内部用 order 调整
+        const left = order.filter(k => MODULE_GROUP_KEYS.left.indexOf(k) !== -1);
+        const center = order.filter(k => MODULE_GROUP_KEYS.center.indexOf(k) !== -1);
+        const dirty = left.join(',') !== MODULE_GROUP_KEYS.left.join(',')
+            || center.join(',') !== MODULE_GROUP_KEYS.center.join(',');
+        const sig = 'tablet:' + left.join(',') + '|' + center.join(',');
         if (sig === lastModuleOrderSig) {
-            // 顺序没变：只在 Vue 重渲染导致 class/order 丢失时补一次
-            const needFix = (stack !== main.classList.contains('dnf-mod-stack'))
-                || (stack && order.some((key, i) => {
-                    const def = MODULE_DEFS.find(d => d.key === key);
+            const needFix = main.classList.contains('dnf-mod-stack')
+                || left.some((k, i) => {
+                    const def = MODULE_DEFS.find(d => d.key === k);
                     const el = def && document.querySelector(def.sel);
-                    return !!el && el.style.order !== String((i + 1) * 10);
-                }));
+                    return !!el && el.style.order !== (dirty ? String((i + 1) * 10) : '');
+                })
+                || center.some((k, i) => {
+                    const def = MODULE_DEFS.find(d => d.key === k);
+                    const el = def && document.querySelector(def.sel);
+                    return !!el && el.style.order !== (dirty ? String((i + 1) * 10) : '');
+                })
+                || (() => {
+                    const rc = document.querySelector('.main .right-col');
+                    return !!rc && rc.style.order !== '';
+                })();
             if (!needFix) return;
         }
         lastModuleOrderSig = sig;
-        if (stack) main.classList.add('dnf-mod-stack');
-        else main.classList.remove('dnf-mod-stack');
-
-        order.forEach((key, i) => {
-            const def = MODULE_DEFS.find(d => d.key === key);
-            const el = def && document.querySelector(def.sel);
-            if (el) el.style.order = stack ? String((i + 1) * 10) : '';
+        main.classList.remove('dnf-mod-stack');
+        left.forEach((k, i) => {
+            const def = MODULE_DEFS.find(d => d.key === k);
+            if (def) setModuleOrderStyle(def.sel, dirty ? String((i + 1) * 10) : '');
         });
-        // 「增益效果」面板没有单独开放排序，固定跟随「地图怪物框」其后
-        const buff = document.querySelector('.main .buff-panel');
+        center.forEach((k, i) => {
+            const def = MODULE_DEFS.find(d => d.key === k);
+            if (def) setModuleOrderStyle(def.sel, dirty ? String((i + 1) * 10) : '');
+        });
+        setModuleOrderStyle('.main .right-col', '');
+        const buff = document.querySelector(buffSel);
         if (buff) {
-            const di = order.indexOf('dungeon');
-            buff.style.order = stack ? String((di + 1) * 10 + 1) : '';
+            const di = center.indexOf('dungeon');
+            buff.style.order = dirty && di >= 0 ? String((di + 1) * 10 + 1) : '';
         }
     }
 
@@ -1597,29 +1715,44 @@
             '</div></div>';
     }
 
-    /** 渲染「模块顺序」：移动端用 ↑/↓ 调整六大模块的上下位置 */
+    /** 渲染「模块顺序」：手机可跨栏；平板按栏分组，只在栏内调整 */
     function renderModuleOrderRows() {
         const order = normalizedModuleOrder();
+        const mode = moduleLayoutMode();
         const btnStyle = 'display:inline-flex;align-items:center;justify-content:center;' +
             'width:22px;height:22px;border-radius:4px;background:rgba(255,255,255,0.08);' +
             'border:1px solid rgba(255,184,77,0.35);color:#ffd76b;font-size:13px;line-height:1;' +
             'cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent';
+        const offStyle = 'opacity:.3;pointer-events:none';
         let html = '<div style="border-top:1px dashed rgba(255,184,77,0.35);margin:6px 0"></div>' +
             '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">' +
-                '<span style="font-size:11px;color:#ffb84d;font-weight:700">模块顺序</span>' +
+                '<span style="font-size:11px;color:#ffb84d;font-weight:700">模块顺序' +
+                    (mode === 'tablet' ? '（平板·仅同栏内）' : '') + '</span>' +
                 '<span data-modreset="1" style="font-size:10px;color:#a79070;cursor:pointer;' +
                     'text-decoration:underline">恢复默认</span>' +
             '</div>';
-        order.forEach((key, i) => {
+        const rowHtml = (key, index, count) => {
             const def = MODULE_DEFS.find(d => d.key === key);
-            html += '<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0">' +
+            const canUp = index > 0;
+            const canDown = index < count - 1;
+            return '<div style="display:flex;align-items:center;justify-content:space-between;margin:2px 0">' +
                 '<span style="font-size:11px;color:#ffd76b;white-space:nowrap;overflow:hidden;' +
-                    'text-overflow:ellipsis">' + (i + 1) + '. ' + def.label + '</span>' +
+                    'text-overflow:ellipsis">' + (index + 1) + '. ' + def.label + '</span>' +
                 '<span style="display:flex;gap:4px;flex:0 0 auto;margin-left:6px">' +
-                    '<span data-modmove="' + key + ':up" style="' + btnStyle + '">↑</span>' +
-                    '<span data-modmove="' + key + ':down" style="' + btnStyle + '">↓</span>' +
+                    '<span data-modmove="' + key + ':up" style="' + btnStyle + (canUp ? '' : ';' + offStyle) + '">↑</span>' +
+                    '<span data-modmove="' + key + ':down" style="' + btnStyle + (canDown ? '' : ';' + offStyle) + '">↓</span>' +
                 '</span></div>';
-        });
+        };
+        if (mode === 'tablet') {
+            [['left', '左栏'], ['center', '中栏']].forEach(([group, label]) => {
+                const keys = order.filter(k => MODULE_GROUP_KEYS[group].indexOf(k) !== -1);
+                html += '<div style="font-size:10px;color:#a79070;margin:5px 0 2px">' + label + '</div>';
+                keys.forEach((key, i) => { html += rowHtml(key, i, keys.length); });
+            });
+            html += '<div style="font-size:10px;color:#a79070;margin:5px 0 0">功能框：固定，不参与排序</div>';
+            return html;
+        }
+        order.forEach((key, i) => { html += rowHtml(key, i, order.length); });
         return html;
     }
 
@@ -2667,6 +2800,16 @@
                 '.main.dnf-mod-stack>.right-col{grid-column:auto !important;' +
                     'height:auto !important;overflow:visible !important}' +
             '}',
+            // ===== 立即处理收益弹窗（v5.95）=====
+            '.dnf-fg-sec{margin:0 0 10px;padding:8px 10px;border:1px solid #3f3123;' +
+                'background:#261e15;border-radius:8px}',
+            '.dnf-fg-sec-title{color:#ffd794;font-weight:700;font-size:12px;margin-bottom:4px;' +
+                'display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}',
+            '.dnf-fg-row{display:flex;justify-content:space-between;gap:8px;font-size:12px;' +
+                'color:#edddc3;margin:2px 0;min-width:0}',
+            '.dnf-fg-row>span:first-child{min-width:0;overflow-wrap:anywhere}',
+            '.dnf-fg-row>span:last-child{color:#ffd794;white-space:nowrap;flex:0 0 auto}',
+            '.dnf-fg-note{color:#baa78e;font-size:11px;margin-top:4px}',
         ].join('\n');
         (document.head || document.documentElement).appendChild(st);
     }
@@ -3391,9 +3534,8 @@
         const data = await postCharacterApi(store, 'decompose',
             { instance_id: Number(item.instance_id) }, 12000, '分解失败');
         if (store.detailItem) store.detailItem.value = null;
-        if (data && Array.isArray(data.outputs) && data.outputs.length) {
-            await showDecomposeGain(data.outputs);
-        } else {
+        // 收益弹窗由 onDecomposeResponse 统一处理，这里只在没有产物时兜底提示
+        if (!(data && Array.isArray(data.outputs) && data.outputs.length)) {
             showTip('已分解：' + (item.name || '装备'));
         }
         try {
@@ -5437,19 +5579,17 @@
         return '物品 ' + itemId;
     }
 
-    async function showDecomposeGain(outputs) {
-        if (!Array.isArray(outputs) || !outputs.length) return;
-        const agg = new Map();
-        for (const o of outputs) {
-            const id = Number(o && o.item_id);
-            const n = Number(o && o.count) || 0;
-            if (!id || n <= 0) continue;
-            agg.set(id, (agg.get(id) || 0) + n);
-        }
-        if (!agg.size) return;
-        const parts = [];
-        for (const [id, n] of agg) parts.push((await resolveItemName(id)) + ' ×' + n);
-        showTip('分解获得：' + parts.join('、'));
+    /** 分解收益：与「立即处理」共用同一个收益弹窗（v5.96 起替代 toast） */
+    async function presentDecomposeGain(outputs, count) {
+        const agg = aggregateOutputs(outputs);
+        if (!agg.size) return false;
+        await renderGainPanel({
+            title: '分解收益',
+            sold: null,
+            decomposed: Number(count) || 0,
+            outputs: agg,
+        });
+        return true;
     }
 
     /** 只认分解接口的成功响应；其它情况静默 */
@@ -5460,7 +5600,9 @@
             const j = JSON.parse(text);
             if (!j || typeof j !== 'object') return;
             if (j.status && j.status !== 'decomposed') return;
-            showDecomposeGain(j.outputs);
+            const count = Number(j.decomposed) || Number(j.count)
+                || (Array.isArray(j.items) ? j.items.length : 0);
+            presentDecomposeGain(j.outputs, count);
         } catch (_) { }
     }
 
@@ -5496,6 +5638,264 @@
             if (/\/decompose(-batch)?(\?|$)/.test(url)) {
                 this.addEventListener('load', () => {
                     onDecomposeResponse(url, this.status, this.responseText);
+                });
+            }
+            return origSend.apply(this, arguments);
+        };
+    }
+
+    /* ============================================================
+     * 「立即处理」收益统计与弹窗（v5.95）
+     * ------------------------------------------------------------
+     * 游戏原生「自动过滤 → 立即处理现有背包」走：
+     *   POST /api/characters/{id}/bag-filter-apply
+     *   请求 {filter:{enabled,rarity_actions,below_level,slots}}
+     *   响应 {sold, decomposed, gold_gained, outputs[]}
+     * 原生只在 toast 里报件数，出售金币与分解产物都没有展示。
+     *
+     * 这里只旁路观察（不改请求/响应、不拦原生逻辑）：
+     *   ① 请求发出前抓背包（装备 instance_id/品质/名称 + 材料数量）与金币；
+     *   ② 响应成功后主动刷新背包，用前后差集推断「卖掉的是哪些品质」；
+     *   ③ 分解产物优先用响应里的 outputs，缺失时用材料数量差兜底；
+     *   ④ 弹窗只展示本次结果；装备详情页的分解收益也走同一个弹窗。
+     * ============================================================ */
+    let _gainPanelEl = null;
+
+    function snapshotBagForFilter() {
+        const store = getGameStore();
+        if (!store) return null;
+        const inv = (store.inventory && store.inventory.value) || [];
+        const equip = new Map();
+        const mats = new Map();
+        for (const it of inv) {
+            if (!it) continue;
+            if (it.kind === 'equipment') {
+                equip.set(String(it.instance_id), { name: it.name || '', rarity: Number(it.rarity) || 0 });
+            } else {
+                const id = Number(it.item_id);
+                const n = Number(it.count) || 0;
+                if (id && n > 0) mats.set(id, n);
+            }
+        }
+        return {
+            charId: (store.character && store.character.value && store.character.value.id) || 0,
+            gold: (store.character && store.character.value && Number(store.character.value.gold)) || 0,
+            equip, mats
+        };
+    }
+
+    function filterActionsFromBody(body) {
+        try {
+            const obj = typeof body === 'string' ? JSON.parse(body) : body;
+            const f = obj && obj.filter;
+            if (!f || typeof f !== 'object') return null;
+            const out = {};
+            const ra = f.rarity_actions || {};
+            Object.keys(ra).forEach(k => { out[Number(k)] = String(ra[k]); });
+            return out;
+        } catch (_) { return null; }
+    }
+
+    function aggregateOutputs(list) {
+        const agg = new Map();
+        (Array.isArray(list) ? list : []).forEach(o => {
+            const id = Number(o && o.item_id);
+            const n = Number(o && o.count) || 0;
+            if (id && n > 0) agg.set(id, (agg.get(id) || 0) + n);
+        });
+        return agg;
+    }
+
+    function onFilterApplyResponse(url, status, text, before, body) {
+        try {
+            if (!/\/bag-filter-apply(\?|$)/.test(String(url || ''))) return;
+            if (!(status >= 200 && status < 300)) return;
+            const j = JSON.parse(text);
+            if (!j || typeof j !== 'object') return;
+            const sold = Number(j.sold) || 0;
+            const decomposed = Number(j.decomposed) || 0;
+            const gold = Number(j.gold_gained) || 0;
+            if (sold <= 0 && decomposed <= 0 && gold <= 0) return;
+            presentFilterGain(before, {
+                sold, decomposed, gold,
+                outputs: Array.isArray(j.outputs) ? j.outputs : [],
+                actions: filterActionsFromBody(body),
+            });
+        } catch (_) { }
+    }
+
+    async function presentFilterGain(before, res) {
+        const store = getGameStore();
+        if (store && typeof store.loadInventory === 'function') {
+            try { await store.loadInventory(); } catch (_) { }
+        }
+        await new Promise(r => setTimeout(r, 350));
+        const after = snapshotBagForFilter();
+
+        // 出售明细：处理前后消失的装备，按品质聚合；已知分解品质的排除
+        const soldByRarity = new Map();
+        if (before && after) {
+            before.equip.forEach((it, id) => {
+                if (after.equip.has(id)) return;
+                const act = res.actions ? res.actions[it.rarity] : '';
+                if (act === 'decompose') return;
+                soldByRarity.set(it.rarity, (soldByRarity.get(it.rarity) || 0) + 1);
+            });
+        }
+        const inferredSold = Array.from(soldByRarity.values()).reduce((a, b) => a + b, 0);
+
+        // 分解产物：优先服务端 outputs，缺失时用材料数量差
+        let outputAgg = aggregateOutputs(res.outputs);
+        if (!outputAgg.size && res.decomposed > 0 && before && after) {
+            after.mats.forEach((n, id) => {
+                const old = before.mats.get(id) || 0;
+                if (n > old) outputAgg.set(id, n - old);
+            });
+            // 材料可能被同时消耗，过滤掉明显噪声（单项超过分解件数 * 20）
+            const limit = Math.max(20, res.decomposed * 20);
+            outputAgg.forEach((n, id) => { if (n > limit) outputAgg.delete(id); });
+        }
+
+        await renderGainPanel({
+            title: '立即处理收益',
+            sold: {
+                count: res.sold,
+                gold: res.gold,
+                byRarity: soldByRarity,
+                inferred: inferredSold,
+            },
+            decomposed: res.decomposed,
+            outputs: outputAgg,
+        });
+    }
+
+    /** 统一收益弹窗：出售（件数/金币/品质）+ 分解产物；只展示本次结果 */
+    async function renderGainPanel(opts) {
+        if (_gainPanelEl) { _gainPanelEl.remove(); _gainPanelEl = null; }
+        const mask = uiEl('div', 'dnf-rp-mask');
+        const panel = uiEl('div', 'dnf-rp-panel');
+        _gainPanelEl = mask;
+        panel.style.width = 'min(440px, calc(100vw - 16px))';
+        panel.style.maxHeight = 'calc(100vh - 32px)';
+        mask.addEventListener('click', (e) => {
+            if (e.target === mask) { mask.remove(); if (_gainPanelEl === mask) _gainPanelEl = null; }
+        });
+        panel.addEventListener('click', (e) => e.stopPropagation());
+
+        const head = uiEl('div', 'dnf-rp-head');
+        const left = uiEl('div', '');
+        const subParts = [];
+        if (opts.sold) subParts.push(opts.sold.count + ' 件出售');
+        if (opts.decomposed > 0) subParts.push(opts.decomposed + ' 件分解');
+        left.append(
+            uiEl('div', 'dnf-rp-title', opts.title || '收益'),
+            uiEl('div', 'dnf-rp-sub', subParts.join(' · '))
+        );
+        const closeX = uiEl('button', 'dnf-rp-x', '×');
+        closeX.type = 'button';
+        closeX.title = '关闭';
+        closeX.addEventListener('click', () => {
+            mask.remove();
+            if (_gainPanelEl === mask) _gainPanelEl = null;
+        });
+        head.append(left, closeX);
+
+        const body = uiEl('div', 'dnf-rp-body');
+        // ① 出售（仅立即处理路径有）
+        if (opts.sold) {
+            const sold = opts.sold;
+            const soldSec = uiEl('div', 'dnf-fg-sec');
+            const soldTitle = uiEl('div', 'dnf-fg-sec-title');
+            soldTitle.append(uiEl('span', '', '出售'), uiEl('span', '', '+' + (Number(sold.gold) || 0).toLocaleString() + ' 金币'));
+            soldSec.append(soldTitle);
+            const soldCountRow = uiEl('div', 'dnf-fg-row');
+            soldCountRow.append(uiEl('span', '', '共出售'), uiEl('span', '', sold.count + ' 件'));
+            soldSec.append(soldCountRow);
+            const raritys = Array.from((sold.byRarity || new Map()).keys()).sort((a, b) => a - b);
+            if (raritys.length) {
+                for (const r of raritys) {
+                    const row = uiEl('div', 'dnf-fg-row');
+                    row.append(uiEl('span', '', '· ' + (rarityNameOf(r) || ('品质 ' + r))),
+                        uiEl('span', '', sold.byRarity.get(r) + ' 件'));
+                    soldSec.append(row);
+                }
+                if (sold.inferred !== sold.count) {
+                    soldSec.append(uiEl('div', 'dnf-fg-note',
+                        '按品质为本地前后背包推断，' + (sold.inferred > sold.count ? '多于' : '少于')
+                        + '服务端件数（可能含锁定/不可出售项）'));
+                }
+            } else if (sold.count > 0) {
+                soldSec.append(uiEl('div', 'dnf-fg-note', '本次未能取得逐件明细（背包未加载或已被其他操作刷新）'));
+            }
+            body.append(soldSec);
+        }
+
+        // ② 分解产物
+        const decSec = uiEl('div', 'dnf-fg-sec');
+        const decTitle = uiEl('div', 'dnf-fg-sec-title');
+        decTitle.append(uiEl('span', '', '分解'),
+            uiEl('span', '', opts.decomposed > 0 ? (opts.decomposed + ' 件') : '产物'));
+        decSec.append(decTitle);
+        if (opts.outputs && opts.outputs.size) {
+            for (const [id, n] of opts.outputs.entries()) {
+                const row = uiEl('div', 'dnf-fg-row');
+                row.append(uiEl('span', '', await resolveItemName(id)), uiEl('span', '', '×' + n));
+                decSec.append(row);
+            }
+        } else {
+            decSec.append(uiEl('div', 'dnf-fg-note', '未返回分解产物明细'));
+        }
+        body.append(decSec);
+
+        const foot = uiEl('div', 'dnf-rp-foot');
+        const ok = uiEl('button', 'dnf-rp-btn primary', '关闭');
+        ok.type = 'button';
+        ok.addEventListener('click', () => {
+            mask.remove();
+            if (_gainPanelEl === mask) _gainPanelEl = null;
+        });
+        foot.append(ok);
+
+        panel.append(head, body, foot);
+        mask.append(panel);
+        document.body.append(mask);
+    }
+
+    /** 只旁路观察「立即处理」响应；不改请求、不拦原生流程 */
+    function initFilterGainPopup() {
+        if (window.__dnfFilterGain595) return;
+        window.__dnfFilterGain595 = true;
+        if (typeof window.fetch === 'function') {
+            const origFetch = window.fetch;
+            window.fetch = function (input, init) {
+                const url = typeof input === 'string' ? input : (input && input.url) || '';
+                const hit = /\/bag-filter-apply(\?|$)/.test(String(url));
+                const before = hit ? snapshotBagForFilter() : null;
+                const body = hit && init ? init.body : null;
+                const p = origFetch.apply(this, arguments);
+                if (before) {
+                    p.then(resp => {
+                        try {
+                            const clone = resp.clone();
+                            clone.text().then(txt => onFilterApplyResponse(url, resp.status, txt, before, body)).catch(() => { });
+                        } catch (_) { }
+                    }).catch(() => { });
+                }
+                return p;
+            };
+        }
+        const origOpen = XMLHttpRequest.prototype.open;
+        const origSend = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.open = function (method, url) {
+            this.__dnfFilterUrl = String(url || '');
+            return origOpen.apply(this, arguments);
+        };
+        XMLHttpRequest.prototype.send = function (body) {
+            const url = this.__dnfFilterUrl || '';
+            if (/\/bag-filter-apply(\?|$)/.test(url)) {
+                const before = snapshotBagForFilter();
+                this.addEventListener('load', () => {
+                    onFilterApplyResponse(url, this.status, this.responseText, before, body);
                 });
             }
             return origSend.apply(this, arguments);
@@ -6231,6 +6631,8 @@
         applyGameUiTweaks();
         // v5.88：旁路读取分解响应，用 toast 提示实际获得的材料
         initDecomposeGainToast();
+        // v5.95：旁路读取「立即处理」响应，弹窗展示出售金币与分解产物
+        initFilterGainPopup();
 
         // 1. 扫描分层（v5.90：统一走模块级 runScans / runLightScans，不再本地重复定义）
         // DOM 变化去抖：合并为一轮轻量扫描
