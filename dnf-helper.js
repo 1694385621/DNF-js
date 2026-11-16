@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      5.97
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，功能框固定，手机单列与桌面三栏行为不变）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；装备详情页分解也走同一弹窗，替换原 toast）。
+// @version      5.99
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -264,7 +264,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '5.97';
+    const VERSION = '5.99';
 
     /**
      * 游戏接口 GET 统一超时（v5.90）
@@ -288,19 +288,18 @@
      */
     const SETTING_KEYS = ['relocateTabsAfterSettlement', 'hudCorner', 'hudPos', 'hudDock', 'uiTheme', 'debugHud', 'moduleOrder', 'hideUnlearnedSkills', 'hideGameAssistant', 'hudCollapsed', 'autoCheckUpdate'];
 
-    /** 可自定义上下顺序的六大模块（v5.95：按栏分组，跨栏不可移动） */
+    /** 可自定义上下顺序的六大模块（v5.95：按栏分组；v5.98：功能框并入中栏） */
     const MODULE_DEFS = [
         { key: 'char', label: '人物框', sel: '.main .doll-panel', group: 'left' },
         { key: 'status', label: '状态框', sel: '.main .resource-panel', group: 'left' },
         { key: 'dungeon', label: '地图怪物框', sel: '.main .panel.dungeon', group: 'center' },
         { key: 'settle', label: '结算框', sel: '.main .panel.settle', group: 'center' },
         { key: 'log', label: '日志框', sel: '.main .panel.battle-log', group: 'center' },
-        // 功能框固定，不参与排序
-        { key: 'tabs', label: '功能框', sel: '.main .right-col', group: 'tabs' },
+        { key: 'tabs', label: '功能框', sel: '.main .right-col', group: 'center' },
     ];
     const MODULE_GROUP_KEYS = {
         left: ['char', 'status'],
-        center: ['dungeon', 'settle', 'log'],
+        center: ['dungeon', 'settle', 'log', 'tabs'],
     };
     const MODULE_DEFAULT_ORDER = MODULE_DEFS.map(d => d.key);
     const isMobileLayout = () =>
@@ -589,7 +588,7 @@
         if (mode === 'tablet') {
             const def = MODULE_DEFS.find(d => d.key === key);
             const groupKeys = def && MODULE_GROUP_KEYS[def.group];
-            if (!groupKeys) return false;           // 功能框固定
+            if (!groupKeys) return false;           // 未知分组不可移动
             const inGroup = order.filter(k => groupKeys.indexOf(k) !== -1);
             const vi = inGroup.indexOf(key);
             if (vi < 0) return false;
@@ -621,12 +620,32 @@
         return true;
     }
 
+    /**
+     * v5.98：平板上功能框要和日志框同栏，才能按 order 栏内排序。
+     * 只在平板模式把 .right-col 临时移入 .center-col；离开平板立即放回 .main，
+     * 保证手机单列堆叠（依赖 .main > .right-col）与桌面三栏都不受影响。
+     */
+    function syncTabletTabsParent(mode) {
+        const main = document.querySelector('.main');
+        if (!main) return false;
+        const center = main.querySelector('.center-col');
+        const right = main.querySelector('.right-col');
+        if (!center || !right) return false;
+        if (mode === 'tablet') {
+            if (right.parentElement !== center) { center.appendChild(right); return true; }
+            return false;
+        }
+        if (right.parentElement === center) { main.appendChild(right); return true; }
+        return false;
+    }
+
     function applyModuleOrder() {
         const main = document.querySelector('.main');
         if (!main) return;
         const mode = moduleLayoutMode();
         const order = normalizedModuleOrder();
         const buffSel = '.main .buff-panel';
+        syncTabletTabsParent(mode);
 
         if (mode === 'desktop') {
             // 桌面三栏：清掉全部排序样式，保持游戏原生
@@ -688,7 +707,8 @@
                 })
                 || (() => {
                     const rc = document.querySelector('.main .right-col');
-                    return !!rc && rc.style.order !== '';
+                    const cc = document.querySelector('.main .center-col');
+                    return !rc || !cc || rc.parentElement !== cc;
                 })();
             if (!needFix) return;
         }
@@ -702,7 +722,6 @@
             const def = MODULE_DEFS.find(d => d.key === k);
             if (def) setModuleOrderStyle(def.sel, dirty ? String((i + 1) * 10) : '');
         });
-        setModuleOrderStyle('.main .right-col', '');
         const buff = document.querySelector(buffSel);
         if (buff) {
             const di = center.indexOf('dungeon');
@@ -1749,7 +1768,7 @@
                 html += '<div style="font-size:10px;color:#a79070;margin:5px 0 2px">' + label + '</div>';
                 keys.forEach((key, i) => { html += rowHtml(key, i, keys.length); });
             });
-            html += '<div style="font-size:10px;color:#a79070;margin:5px 0 0">功能框：固定，不参与排序</div>';
+            html += '<div style="font-size:10px;color:#a79070;margin:5px 0 0">功能框已并入中栏，可与日志框互换位置</div>';
             return html;
         }
         order.forEach((key, i) => { html += rowHtml(key, i, order.length); });
@@ -3389,6 +3408,10 @@
             depositDetailItem(store, box);
         });
         box.append(btn);
+        // v5.98：材料/消耗品详情在「存仓」右侧加上架拍卖（装备不显示，装备请在拍卖行内上架）
+        if (item.kind !== 'equipment') {
+            box.append(createAuctionButton(store, box, item));
+        }
         // v5.91：背包装备详情在「存仓」右侧加「分解」（与存仓同一行）
         if (sub === 'equip' && item.kind === 'equipment') {
             box.append(createDecomposeButton(store, box, item));
@@ -3396,6 +3419,83 @@
         box.append(msg);
         actions.appendChild(box);
     }
+
+    /* ============================================================
+     * 背包材料/消耗品「上架拍卖」按钮（v5.98）
+     *
+     * 不做自建接口：直接调用游戏 store 的原生上架流程
+     *   store.openAuctionList() -> 刷新背包并打开「上架物品」面板
+     *   store.auctionCandidates -> 游戏自己过滤后的可上架清单
+     *   store.pickAuctionTarget(x) -> 选中目标并回填参考价
+     * 玩家在原生面板里确认价格后才真正发出请求。
+     * ============================================================ */
+    // 与游戏内 auctionCandidates 使用的绑定/不可交易清单保持一致
+    const AUCTION_BOUND_IDS = new Set([
+        3213, 3215, 3219, 3256, 3280, 3282, 3330, 2682582,
+        4083, 3209, 4176, 4343, 4421, 4430, 4830, 10095702,
+    ]);
+
+    function auctionBlockedReason(item) {
+        if (!item || item.kind === 'equipment') return '装备请在拍卖行内上架';
+        if (!(Number(item.count) > 0)) return '数量不足，无法上架';
+        if (AUCTION_BOUND_IDS.has(Number(item.item_id))) return '该物品为绑定 / 不可交易';
+        return '';
+    }
+
+    function createAuctionButton(store, box, item) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'da-btn dnf-deposit-btn dnf-auction-btn';
+        btn.textContent = '上架拍卖';
+        const blocked = auctionBlockedReason(item);
+        btn.title = blocked ? ('无法上架：' + blocked) : '打开游戏拍卖行的上架面板';
+        if (blocked) {
+            btn.disabled = true;
+        } else {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openNativeAuctionList(store, box, item, btn);
+            });
+        }
+        return btn;
+    }
+
+    /** 调游戏自身的上架面板；解析不到可上架条目时关闭面板并说明原因 */
+    async function openNativeAuctionList(store, box, item, btn) {
+        if (!store || typeof store.openAuctionList !== 'function') {
+            setDepositMsg(box, '当前游戏版本不支持拍卖上架', true);
+            return;
+        }
+        const old = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '打开中…';
+        setDepositMsg(box, '', false);
+        try {
+            await store.openAuctionList();
+            const list = store.auctionCandidates && store.auctionCandidates.value
+                ? store.auctionCandidates.value : [];
+            const hit = list.find(x => Number(x.item_id) === Number(item.item_id) && x.kind !== 'equipment');
+            if (!hit) {
+                if (store.auctionListOpen) store.auctionListOpen.value = false;
+                setDepositMsg(box, '该物品不可上架：绑定或不可交易', true);
+                return;
+            }
+            if (typeof store.pickAuctionTarget === 'function') store.pickAuctionTarget(hit);
+            // v5.99：原生上架面板（.modal-mask z-index:200）低于详情弹窗（z-index:260），
+            // 面板弹出后详情会把「上架数量 / 单件价格 / 确认上架」整块压住。
+            // 这里在预选成功后直接关闭详情（与游戏原生「上架拍卖」的行为一致），
+            // 不改 z-index、不加 !important；详情关掉后拍卖面板仍保持打开且可正常操作。
+            // 原生面板之后被关闭时，用户回到背包即可，不会残留悬空浮层。
+            closeGameDetail(store);
+        } catch (err) {
+            setDepositMsg(box, (err && err.message) ? err.message : '打开拍卖行失败', true);
+        } finally {
+            btn.textContent = old;
+            btn.disabled = !!auctionBlockedReason(item);
+        }
+    }
+
 
     /* ============================================================
      * 背包装备详情「分解」按钮（v5.91）
@@ -5723,7 +5823,11 @@
         for (const it of inv) {
             if (!it) continue;
             if (it.kind === 'equipment') {
-                equip.set(String(it.instance_id), { name: it.name || '', rarity: Number(it.rarity) || 0 });
+                equip.set(String(it.instance_id), {
+                    name: it.name || '',
+                    rarity: Number(it.rarity) || 0,
+                    price: Number(it.price) || 0,
+                });
             } else {
                 const id = Number(it.item_id);
                 const n = Number(it.count) || 0;
@@ -5785,13 +5889,15 @@
         await new Promise(r => setTimeout(r, 350));
         const after = snapshotBagForFilter();
 
-        // 出售明细：处理前后消失的装备，按品质聚合；已知分解品质的排除
+        // 出售明细：处理前后消失的装备，按品质聚合；已知分解品质、以及 price<=0
+        // （服务端卖不掉会自动转分解）的装备都不计入出售
         const soldByRarity = new Map();
         if (before && after) {
             before.equip.forEach((it, id) => {
                 if (after.equip.has(id)) return;
                 const act = res.actions ? res.actions[it.rarity] : '';
                 if (act === 'decompose') return;
+                if (!(Number(it.price) > 0)) return;
                 soldByRarity.set(it.rarity, (soldByRarity.get(it.rarity) || 0) + 1);
             });
         }
@@ -5883,22 +5989,29 @@
             body.append(soldSec);
         }
 
-        // ② 分解产物
-        const decSec = uiEl('div', 'dnf-fg-sec');
-        const decTitle = uiEl('div', 'dnf-fg-sec-title');
-        decTitle.append(uiEl('span', '', '分解'),
-            uiEl('span', '', opts.decomposed > 0 ? (opts.decomposed + ' 件') : '产物'));
-        decSec.append(decTitle);
-        if (opts.outputs && opts.outputs.size) {
-            for (const [id, n] of opts.outputs.entries()) {
-                const row = uiEl('div', 'dnf-fg-row');
-                row.append(uiEl('span', '', await resolveItemName(id)), uiEl('span', '', '×' + n));
-                decSec.append(row);
+        // ② 分解产物（v5.98：没有分解件数也没有产物时整段不渲染）
+        const hasDecompose = (Number(opts.decomposed) || 0) > 0
+            || !!(opts.outputs && opts.outputs.size);
+        if (hasDecompose) {
+            const decSec = uiEl('div', 'dnf-fg-sec');
+            const decTitle = uiEl('div', 'dnf-fg-sec-title');
+            decTitle.append(uiEl('span', '', '分解'),
+                uiEl('span', '', opts.decomposed > 0 ? (opts.decomposed + ' 件') : '产物'));
+            decSec.append(decTitle);
+            if (opts.outputs && opts.outputs.size) {
+                for (const [id, n] of opts.outputs.entries()) {
+                    const row = uiEl('div', 'dnf-fg-row');
+                    row.append(uiEl('span', '', await resolveItemName(id)), uiEl('span', '', '×' + n));
+                    decSec.append(row);
+                }
+            } else {
+                decSec.append(uiEl('div', 'dnf-fg-note', '未返回分解产物明细'));
             }
-        } else {
-            decSec.append(uiEl('div', 'dnf-fg-note', '未返回分解产物明细'));
+            if ((Number(opts.decomposed) || 0) > 0) {
+                decSec.append(uiEl('div', 'dnf-fg-note', '可能包含设为出售但无法卖出、由服务端自动转分解的装备'));
+            }
+            body.append(decSec);
         }
-        body.append(decSec);
 
         const foot = uiEl('div', 'dnf-rp-foot');
         const ok = uiEl('button', 'dnf-rp-btn primary', '关闭');
