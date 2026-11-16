@@ -1,1 +1,1 @@
-{"version":"5.99","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"修复「上架拍卖」遮挡：点击后原生上架面板打开时自动收起插件详情弹窗（详情 z-index 260 曾压住面板 200），面板完整可见可操作，关闭后无残留浮层；「存仓」不受影响，未改任何原生层级样式。"}
+{"version":"5.100","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"装备图鉴改为首次打开时按需加载：ID 段枚举 + 逐件拉取，只保留史诗(4)/传说(6)、不限等级，带进度/可停止/失败重试，本地缓存 7 天，内置 11 条最小基线兜底；移除 210KB 内联数据。同时包含 5.98 平板模块排序与收益弹窗修正、5.99 上架拍卖自动收起详情。"}
