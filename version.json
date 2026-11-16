@@ -1,1 +1,1 @@
-{"version":"5.97","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"修复仓库带前后空格道具（如增幅券）无法取出：改为按渲染同源列表 whItemsFiltered / warehouseEquipFiltered 的下标取 item_id / instance_id，名字规范化与图标仅作校验；解析失败不再吞点击，交回原生；装备二次确认与材料自选数量行为不变。"}
+{"version":"5.99","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"修复「上架拍卖」遮挡：点击后原生上架面板打开时自动收起插件详情弹窗（详情 z-index 260 曾压住面板 200），面板完整可见可操作，关闭后无残留浮层；「存仓」不受影响，未改任何原生层级样式。"}
