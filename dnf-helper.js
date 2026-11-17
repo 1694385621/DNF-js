@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      5.100
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情；v5.100 改为首次打开时按需加载，只收史诗/传说、不限等级，ID 段枚举 + 逐件拉取带进度/可停止/失败重试，localStorage 缓存 7 天，内置最小基线兜底）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（161 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
+// @version      6.01
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情；v5.101 收纳史诗/传说 + Lv85 神器散件共 1,166 条，新增「神器/史诗/传说」品质筛选、武器按职业→类型三级分类、分批渲染，右上角「刷新」需二次确认；首次打开按需加载，ID 段枚举 + 逐件拉取带进度/可停止/失败重试，localStorage 缓存 7 天，内置最小基线兜底）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（174 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存；v5.101 补「回避率」映射、右上角刷新需二次确认）+ 强化/增幅保护券提醒（当前等级 ≥10 且未勾选保护券时，首次点击只提示不执行，勾选后再点一次放行）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -264,7 +264,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '5.100';
+    const VERSION = '6.01';
 
     /**
      * 游戏接口 GET 统一超时（v5.90）
@@ -1453,7 +1453,7 @@
         logBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleLogViewer(); });
         // v5.83：装备图鉴按钮（紧挨日志按钮，沿用同一套圆形图标样式）
         const atlasBtn = document.createElement('span');
-        atlasBtn.title = '装备图鉴（史诗 / 传说）';
+        atlasBtn.title = '装备图鉴（神器 / 史诗 / 传说）';
         atlasBtn._colorStyle = 'color:#ffd76b';
         atlasBtn.style.cssText = btnBase + atlasBtn._colorStyle;
         atlasBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" ' +
@@ -3007,8 +3007,14 @@
             } catch (e) {
                 log('移动功能栏失败（可能被游戏重渲染覆盖）', e);
             }
+        } else if (moduleLayoutMode() === 'tablet') {
+            // v6.01：平板下功能框的父节点由 applyModuleOrder / syncTabletTabsParent
+            // 统一管理（临时放进 .center-col 参与栏内排序）。这里必须直接返回，
+            // 否则本函数与它每 1.2 秒把 .right-col 在 .main 与 .center-col 之间
+            // 来回搬一次，输入框子树被反复摘挂，虚拟键盘刚弹出就会立刻收起。
+            return;
         } else {
-            // 桌面/平板：还原为 .main 的第三个栅格列
+            // 桌面：还原为 .main 的第三个栅格列
             if (rightCol.parentElement === main) return; // 已还原
             try {
                 main.appendChild(rightCol);
@@ -3119,6 +3125,83 @@
      *   - 已装备的 → openCraftPageSlot(slot)，打造页选中该部位
      *   - 背包里的 → openCraftPageInstance(item)，打造页选中该件
      */
+    /**
+     * v5.101：强化 / 增幅保护券提醒（拦一次）
+     * ------------------------------------------------------------------
+     * 只读判断：craftMode ∈ {enhance, amplify}、当前等级 ≥ 10、未勾选保护券。
+     * 第一次点击执行按钮只提示、不执行（preventDefault），第二次点击放行；
+     * 勾选保护券后不再提示；同一「模式+当前等级」10 秒内只提示一次。
+     * 不改原生节点、不改原生数字显示，仅读取 store 与勾选框状态。
+     */
+    function initProtectGuard() {
+        if (document.__dnfProtect5101) return;
+        document.__dnfProtect5101 = true;
+        const guard = { pending: null, lastKey: '', lastAt: 0, instance: null, mask: null };
+
+        function resetGuard() { guard.pending = null; guard.lastKey = ''; guard.lastAt = 0; guard.instance = null; }
+        function readProtect(store) {
+            try {
+                if (store && store.craftProtect && typeof store.craftProtect.value === 'boolean') return store.craftProtect.value;
+            } catch (_) { }
+            const mask = document.querySelector('.modal-mask');
+            const cb = mask && Array.from(mask.querySelectorAll('input[type="checkbox"]'))
+                .find(i => /保护券/.test(((i.closest('label') || i.parentElement || {}).textContent || '')));
+            return !!(cb && cb.checked);
+        }
+
+        document.addEventListener('click', (e) => {
+            const node = e.target;
+            if (!node || !node.closest) return;
+            const btn = node.closest('.modal-mask button');
+            if (!btn) return;
+            const label = (btn.textContent || '').trim();
+            if (label !== '强化' && label !== '增幅') return;
+            if (btn.disabled) return;
+
+            const store = getGameStore();
+            if (!store || !store.craftMode || !store.craftMode.value) return;
+            const mode = store.craftMode.value;
+            if (mode !== 'enhance' && mode !== 'amplify') return;
+
+            const mask = btn.closest('.modal-mask');
+            if (guard.mask !== mask) { resetGuard(); guard.mask = mask; }
+
+            const sel = store.selectedCraftItem && store.selectedCraftItem.value;
+            const item = sel ? sel.item : null;
+            if (!item) return;
+            const cost = mode === 'amplify'
+                ? (store.amplifyCost && store.amplifyCost.value)
+                : (store.enhanceCost && store.enhanceCost.value);
+            const target = cost ? Number(cost.target) : NaN;
+            if (!Number.isFinite(target)) return;              // 已到上限/不可执行，不拦
+            const cur = Number(mode === 'amplify' ? item.amplify_level : item.enhance_level) || 0;
+            if (cur < 10) return;                              // +9 冲 +10 不提示
+
+            if (readProtect(store)) { guard.pending = null; return; }
+
+            const inst = String(item.instance_id || item.id || '');
+            if (guard.instance !== inst) { resetGuard(); guard.instance = inst; }
+
+            const key = mode + ':' + cur;
+            const now = Date.now();
+            // 第二次点击放行
+            if (guard.pending && guard.pending.key === key && now - guard.pending.at <= 10000) {
+                guard.pending = null;
+                return;
+            }
+            // 同一模式+等级 10 秒内只提示一次：其余点击直接放行，不重复提示
+            if (guard.lastKey === key && now - guard.lastAt < 10000) return;
+
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            guard.pending = { key: key, at: now };
+            guard.lastKey = key;
+            guard.lastAt = now;
+            const word = mode === 'amplify' ? '增幅' : '强化';
+            showTip('当前' + word + ' +' + cur + ' 未勾选' + word + '保护券，本次未执行；勾选「使用' + word + '保护券」后再点一次');
+        }, true);
+    }
+
     function initDetailCraftFix() {
         if (document.__dnfCraftFix544) return;
         document.__dnfCraftFix544 = true;
@@ -4873,9 +4956,10 @@
     ];
 
     /* ---------- 图鉴数据加载器（v5.100） ---------- */
-    const ATLAS_RARITY_LABEL = { 4: '史诗', 6: '传说' };
-    const ATLAS_CACHE_KEY = 'dnf_atlas_equip_v5100';
-    const ATLAS_CACHE_VER = 5100;
+    const ATLAS_RARITY_LABEL = { 3: '神器', 4: '史诗', 6: '传说' };
+    // v5.101：收纳范围变为「史诗 + 传说 + Lv85 神器散件」，缓存版本必须升，旧缓存自然失效
+    const ATLAS_CACHE_KEY = 'dnf_atlas_equip_v5101';
+    const ATLAS_CACHE_VER = 5101;
     const ATLAS_TTL_FULL = 7 * 24 * 60 * 60 * 1000;   // 完整数据：7 天
     const ATLAS_TTL_PART = 12 * 60 * 60 * 1000;        // 未跑完的数据：12 小时
     const ATLAS_CONCURRENCY = 6;                        // 与上一轮 ID 段扫描一致，实测 0 次 429
@@ -5002,11 +5086,13 @@
         const key = String(path).toLowerCase().replace(/\.img$/, '').replace(/\//g, '_');
         return '/assets/icons/sprite_' + key + '_' + (Number(index) || 0) + '.png';
     }
-    /** 接口记录 → 图鉴记录；只收史诗(4)与传说(6)，勇者(5)及其它品质全部丢弃 */
+    /** 接口记录 → 图鉴记录；只收史诗(4)、传说(6)、以及 Lv85 神器散件(3 且无套装) */
     function atlasFromApi(raw) {
         if (!raw) return null;
         const rarity = Number(raw.rarity);
-        if (rarity !== 4 && rarity !== 6) return null;
+        const keep = rarity === 4 || rarity === 6
+            || (rarity === 3 && Number(raw.level) === 85 && !raw.set_name);
+        if (!keep) return null;
         const explain = String(raw.basic_explain || '').split(/\r?\n/)
             .map(s => s.trim()).filter(Boolean);
         return {
@@ -5255,12 +5341,15 @@
         special: ['magicstone', 'support'],
     };
     const JOB_ORDER = ['鬼剑士', '格斗家', '神枪手', '魔法师', '圣职者', '暗夜使者'];
+    // v5.101：武器类型按职业顺序排列；全部职业时展开即 28 个类型
+    const WG_ORDER = JOB_ORDER.reduce((acc, job) => acc.concat(Object.keys(WG_LABEL).filter(wg => WG_JOB[wg] === job)), []);
+    const WG_JOB_DEFS = [['all', '全部职业']].concat(JOB_ORDER.map(job => [job, job]));
     const PART_DEFS = [['all', '全部部位'], ['coat', '上衣'], ['pants', '下装'], ['shoulder', '头肩'], ['shoes', '鞋子'], ['belt', '腰带']];
     const ARMOR_DEFS = [['all', '全部甲种'], ['cloth', '布甲'], ['leather', '皮甲'], ['light', '轻甲'], ['heavy', '重甲'], ['plate', '板甲']];
     const JEWEL_DEFS = [['all', '全部'], ['wrist', '手镯'], ['amulet', '项链'], ['ring', '戒指']];
     const SPECIAL_DEFS = [['all', '全部'], ['magicstone', '魔法石'], ['support', '辅助装备']];
-    let state = { q:'', cat:'all', job:'all', part:'all', armor:'all', jewel:'all', special:'all', open:false, detail:null,
-        ostat:'all', oslot:'all', orar:'all' };
+    let state = { q:'', cat:'all', job:'all', part:'all', armor:'all', jewel:'all', special:'all', wg:'all', rar:'all',
+        open:false, detail:null, ostat:'all', oslot:'all', orar:'all' };
     // v5.87：图鉴分「装备 / 宝珠」两页，默认仍停在装备
     let atlasMode = 'equip';
 
@@ -5321,6 +5410,28 @@
             .g85-meta{font-size:11px;color:#b6a47e;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
             .g85-lv{flex:0 0 auto;font-size:10px;color:#9a8a66;border:1px solid #4a3c22;border-radius:3px;padding:0 4px;margin-left:auto}
             .g85-empty{padding:30px 10px;text-align:center;color:#8a7a58;font-size:12px}
+            .g85-more{padding:9px 0 12px;text-align:center;color:#c8a86a;font-size:12px;cursor:pointer;
+                border-top:1px dashed #4a3c24;user-select:none}
+            .g85-more:hover{color:#f5c542}
+
+            /* v5.101：刷新按钮固定在标题栏关闭按钮正下方（标签行右端） */
+            .g85-refresh{margin-left:auto;padding:3px 10px;border-radius:4px;cursor:pointer;
+                border:1px solid #6b5633;background:#241d12;color:#d9c49a;
+                font:12px/1.5 "Microsoft YaHei",sans-serif}
+            .g85-refresh:hover{border-color:#f5c542;color:#f5c542;background:#3a2f18}
+            .g85-confirm{position:fixed;inset:0;z-index:1000025;display:flex;align-items:center;justify-content:center;
+                background:rgba(0,0,0,.55);animation:none}
+            .g85-confirm-box{width:min(330px,calc(100vw - 32px));box-sizing:border-box;padding:16px 16px 14px;
+                border-radius:10px;border:1px solid #9b7645;background:#2a2116;color:#edddc3;
+                font:13px/1.7 "Microsoft YaHei",sans-serif;box-shadow:0 14px 40px #000a}
+            .g85-confirm-title{color:#f5c542;font-weight:700;font-size:15px;margin-bottom:6px}
+            .g85-confirm-text{color:#c9b696;white-space:pre-line}
+            .g85-confirm-btns{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+            .g85-cbtn{padding:6px 14px;border-radius:5px;cursor:pointer;border:1px solid #6b5633;
+                background:#241d12;color:#d9c49a;font:13px/1 "Microsoft YaHei",sans-serif}
+            .g85-cbtn:hover{border-color:#a4885a;color:#f0e7d2}
+            .g85-cbtn.primary{border-color:#9b7645;background:#4a3517;color:#ffd794}
+            .g85-cbtn.primary:hover{background:#5d4319;border-color:#f5c542}
 
             .g85-detail{flex:1 1 auto;overflow-y:auto;padding:10px 12px 16px;display:none}
             .g85-detail::-webkit-scrollbar{width:6px}
@@ -5443,7 +5554,9 @@
     }
 
     // ---------- UI ----------
-    let capsule = null, panel = null, listEl = null, detailEl = null, catWrap = null, subWrap = null, sub2Wrap = null, countEl = null, searchEl = null, loadEl = null;
+    let capsule = null, panel = null, listEl = null, detailEl = null, catWrap = null, subWrap = null, sub2Wrap = null, rarWrap = null,
+        refreshEqBtn = null, refreshOrbBtn = null,
+        countEl = null, searchEl = null, loadEl = null;
 
     function esc(s) {
         return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -5452,9 +5565,11 @@
     function filtered() {
         const q = state.q.trim().toLowerCase();
         return equipData.filter(j => {
+            if (state.rar !== 'all' && String(j.rarity) !== state.rar) return false;
             if (state.cat !== 'all') {
                 if (CAT_SLOTS[state.cat].indexOf(j.slot) === -1) return false;
                 if (state.cat === 'weapon' && state.job !== 'all' && (WG_JOB[j.wg] || '') !== state.job) return false;
+                if (state.cat === 'weapon' && state.wg !== 'all' && j.wg !== state.wg) return false;
                 if (state.cat === 'armor') {
                     if (state.part !== 'all' && j.slot !== state.part) return false;
                     if (state.armor !== 'all' && j.armor !== state.armor) return false;
@@ -5477,15 +5592,34 @@
         return bits.join('　');
     }
 
+    // v5.101：列表分批渲染，首屏 120 条，滚动到底或点「加载更多」再追加
+    const ATLAS_BATCH = 120;
+    let renderArr = [];
+    let renderShown = 0;
+    let renderMoreEl = null;
+
     function renderList() {
         const arr = filtered();
         if (countEl) countEl.textContent = arr.length + ' / ' + equipData.length;
+        const keepTop = listEl.scrollTop;
         listEl.innerHTML = '';
+        renderArr = arr;
+        renderShown = 0;
+        renderMoreEl = null;
         if (!arr.length) {
             listEl.innerHTML = '<div class="g85-empty">没有匹配的装备</div>';
             return;
         }
-        for (const j of arr) {
+        appendBatch();
+        if (keepTop > 0) listEl.scrollTop = keepTop;
+    }
+
+    function appendBatch() {
+        if (renderShown >= renderArr.length) return;
+        const end = Math.min(renderArr.length, renderShown + ATLAS_BATCH);
+        const frag = document.createDocumentFragment();
+        for (let i = renderShown; i < end; i++) {
+            const j = renderArr[i];
             const div = document.createElement('div');
             div.className = 'g85-item';
             div.innerHTML =
@@ -5496,7 +5630,22 @@
             div.querySelector('.g85-meta').textContent = (j.type || '') + (mainStat(j) ? '　' + mainStat(j) : '');
             div.querySelector('.g85-lv').textContent = 'Lv.' + j.level;
             div.addEventListener('click', () => openDetail(j));
-            listEl.appendChild(div);
+            frag.appendChild(div);
+        }
+        if (renderMoreEl && renderMoreEl.parentNode === listEl) listEl.insertBefore(frag, renderMoreEl);
+        else listEl.appendChild(frag);
+        renderShown = end;
+        if (renderShown < renderArr.length) {
+            if (!renderMoreEl) {
+                renderMoreEl = document.createElement('div');
+                renderMoreEl.className = 'g85-more';
+                renderMoreEl.addEventListener('click', appendBatch);
+                listEl.appendChild(renderMoreEl);
+            }
+            renderMoreEl.textContent = '加载更多（' + renderShown + ' / ' + renderArr.length + '）';
+        } else if (renderMoreEl) {
+            renderMoreEl.remove();
+            renderMoreEl = null;
         }
     }
 
@@ -5587,6 +5736,7 @@
             state.armor = 'all';
             state.jewel = 'all';
             state.special = 'all';
+            state.wg = 'all';
             buildSubChips();
             syncSubRows();
         });
@@ -5597,7 +5747,8 @@
         if (!subWrap) return;
         if (state.cat === 'all') { subWrap.innerHTML = ''; return; }
         if (state.cat === 'weapon') {
-            fillChips(subWrap, [['all', '全部职业']].concat(JOB_ORDER.map(j => [j, j])), state.job, key => { state.job = key; });
+            fillChips(subWrap, WG_JOB_DEFS, state.job, key => { state.job = key; state.wg = 'all'; },
+                () => { buildSub2Chips(); renderList(); });
         } else if (state.cat === 'armor') {
             fillChips(subWrap, PART_DEFS, state.part, key => { state.part = key; });
         } else if (state.cat === 'jewel') {
@@ -5607,29 +5758,85 @@
         }
     }
 
-    // 第三行：仅「防具」出现（甲种），与游戏「全部甲种 / 布甲 / 皮甲 / 轻甲 / 重甲 / 板甲」一致
+    // 第三行：防具=甲种；v5.101 武器=武器类型（全部职业时 28 个，指定职业时 5 个/暗夜 3 个）
     function buildSub2Chips() {
         if (!sub2Wrap) return;
-        if (state.cat !== 'armor') { sub2Wrap.innerHTML = ''; return; }
-        fillChips(sub2Wrap, ARMOR_DEFS, state.armor, key => { state.armor = key; });
+        if (state.cat === 'armor') {
+            fillChips(sub2Wrap, ARMOR_DEFS, state.armor, key => { state.armor = key; });
+            return;
+        }
+        if (state.cat === 'weapon') {
+            const list = state.job === 'all' ? WG_ORDER : WG_ORDER.filter(wg => WG_JOB[wg] === state.job);
+            fillChips(sub2Wrap, [['all', '全部类型']].concat(list.map(wg => [wg, WG_LABEL[wg]])), state.wg,
+                key => { state.wg = key; });
+            return;
+        }
+        sub2Wrap.innerHTML = '';
+    }
+
+    // 第四行：品质（仅装备页），与上面三级分类、搜索同时生效
+    const RAR_DEFS = [['all', '全部品质'], ['3', '神器'], ['4', '史诗'], ['6', '传说']];
+    function buildRarChips() {
+        if (!rarWrap) return;
+        fillChips(rarWrap, RAR_DEFS, state.rar, key => { state.rar = key; });
+    }
+
+    // v5.101：二次确认弹窗（不用原生 confirm，避免阻塞整页）
+    let confirmEl = null;
+    function closeConfirm() {
+        if (confirmEl) { confirmEl.remove(); confirmEl = null; }
+    }
+    function askConfirm(title, text, okText, onOk) {
+        closeConfirm();
+        const box = document.createElement('div');
+        box.className = 'g85-confirm';
+        box.innerHTML = '<div class="g85-confirm-box"><div class="g85-confirm-title"></div><div class="g85-confirm-text"></div>' +
+            '<div class="g85-confirm-btns"><button class="g85-cbtn" type="button" data-v="0">取消</button>' +
+            '<button class="g85-cbtn primary" type="button" data-v="1"></button></div></div>';
+        box.querySelector('.g85-confirm-title').textContent = title;
+        box.querySelector('.g85-confirm-text').textContent = text;
+        box.querySelector('.g85-cbtn.primary').textContent = okText || '确定';
+        box.addEventListener('pointerdown', e => e.stopPropagation());
+        box.addEventListener('click', e => {
+            const b = e.target.closest('.g85-cbtn');
+            if (!b) return;
+            e.stopPropagation();
+            const ok = b.getAttribute('data-v') === '1';
+            closeConfirm();
+            if (ok) onOk();
+        });
+        confirmEl = box;
+        document.body.appendChild(box);
+    }
+
+    function askRefreshEquip() {
+        askConfirm('刷新装备图鉴',
+            '将重新枚举 7,745 个装备 ID 并逐件请求接口：约 75 秒、数千次请求（6 并发限速，可随时停止）。\n完成后覆盖本地缓存。\n确定现在刷新吗？',
+            '确定刷新', () => { ensureEquipData(true); });
+    }
+    function askRefreshOrbs() {
+        askConfirm('刷新宝珠图鉴',
+            '将重新请求一次宝珠列表（当前 174 条）并覆盖本地缓存。\n只发 1 次请求，通常 1 秒内完成。\n确定现在刷新吗？',
+            '确定刷新', () => { loadOrbs(true); });
     }
 
     function syncSubRows() {
         if (!subWrap || !sub2Wrap) return;
         subWrap.style.display = state.cat === 'all' ? 'none' : 'flex';
-        sub2Wrap.style.display = state.cat === 'armor' ? 'flex' : 'none';
+        sub2Wrap.style.display = (state.cat === 'armor' || state.cat === 'weapon') ? 'flex' : 'none';
         buildSub2Chips();
     }
 
     /* ================= v5.87 宝珠图鉴 =================
-     * 数据：GET /api/orbs 一次拿全量（161 条，需 Bearer dnf_idle_token）；
+     * 数据：GET /api/orbs 一次拿全量（当前 174 条，需 Bearer dnf_idle_token）；
      * 图标：接口本身不带 icon_path，按 id 逐个 GET /api/items/{id} 取
      *       icon_path + icon_index 拼 sprite 文件名，串行 60ms 间隔，结果进
-     *       localStorage（键 dnf_atlas_orbs_v587，带版本号 v:587，7 天过期）。
+     *       localStorage（键 dnf_atlas_orbs_v5101，带版本号 v:5101，7 天过期）。
+     * v5.101：缓存版本升到 5101，老用户旧缓存自动失效；补 avoid → 回避率。
      * 全部失败只影响宝珠页，装备页与其它功能不受影响。
      * ================================================== */
-    const ORB_CACHE_KEY = 'dnf_atlas_orbs_v587';
-    const ORB_CACHE_VER = 587;
+    const ORB_CACHE_KEY = 'dnf_atlas_orbs_v5101';
+    const ORB_CACHE_VER = 5101;
     const ORB_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
     const ORB_ICON_GAP_MS = 60;
 
@@ -5641,10 +5848,10 @@
         atkSpd: '攻击速度', castSpd: '施放速度', moveSpd: '移动速度',
         elemEnh: '属性强化', elemRes: '属性抗性',
         critP: '物理暴击', critM: '魔法暴击', crit: '暴击',
-        hitRate: '命中率', evasion: '回避率', dmgReduce: '伤害减免',
+        hitRate: '命中率', evasion: '回避率', avoid: '回避率', dmgReduce: '伤害减免',
     };
     const ORB_PCT_KEYS = ['pAtkPct', 'mAtkPct', 'atkSpd', 'castSpd', 'moveSpd', 'elemEnh', 'elemRes',
-        'critP', 'critM', 'crit', 'hitRate', 'evasion', 'dmgReduce'];
+        'critP', 'critM', 'crit', 'hitRate', 'evasion', 'avoid', 'dmgReduce'];
     const ORB_ELEM_LABEL = { fire: '火', light: '光', water: '水', dark: '暗', ice: '冰', all: '全' };
     const ORB_SLOT_LABEL = {
         weapon: '武器', coat: '上衣', pants: '下装', shoulder: '头肩', belt: '腰带', shoes: '鞋子',
@@ -5658,7 +5865,7 @@
     const ORB_STAT_GROUPS = {
         atk: ['pAtkFlat', 'pAtkPct', 'ind', 'critP', 'crit'],
         mag: ['mAtkFlat', 'mAtkPct', 'intel', 'spr', 'critM'],
-        def: ['pDefFlat', 'mDefFlat', 'hpMax', 'mpMax', 'hpRegen', 'mpRegen', 'vit', 'dmgReduce'],
+        def: ['pDefFlat', 'mDefFlat', 'hpMax', 'mpMax', 'hpRegen', 'mpRegen', 'vit', 'avoid', 'dmgReduce'],
         spd: ['atkSpd', 'castSpd', 'moveSpd'],
         elem: ['elemEnh', 'elemRes'],
     };
@@ -5908,7 +6115,10 @@
         const eq = atlasMode !== 'orb';
         if (catWrap) catWrap.style.display = eq ? 'flex' : 'none';
         if (subWrap) subWrap.style.display = eq && state.cat !== 'all' ? 'flex' : 'none';
-        if (sub2Wrap) sub2Wrap.style.display = eq && state.cat === 'armor' ? 'flex' : 'none';
+        if (sub2Wrap) sub2Wrap.style.display = eq && (state.cat === 'armor' || state.cat === 'weapon') ? 'flex' : 'none';
+        if (rarWrap) rarWrap.style.display = eq ? 'flex' : 'none';
+        if (refreshEqBtn) refreshEqBtn.style.display = eq ? '' : 'none';
+        if (refreshOrbBtn) refreshOrbBtn.style.display = eq ? 'none' : '';
         if (orbWraps) {
             orbWraps.stat.style.display = eq ? 'none' : 'flex';
             orbWraps.slot.style.display = eq ? 'none' : 'flex';
@@ -5928,6 +6138,7 @@
 
     function switchAtlasMode(m) {
         if (atlasMode === m) return;
+        closeConfirm();
         atlasMode = m;
         state.q = '';
         if (searchEl) searchEl.value = '';
@@ -5939,12 +6150,15 @@
         p.className = 'g85-panel';
         p.style.display = 'none';
         p.innerHTML = '<div class="g85-head"><b>装备图鉴</b><span class="g85-count"></span><button class="g85-x" data-no-drag type="button" title="关闭">×</button></div>' +
-            '<div class="g85-tabs"><div class="g85-tab on" data-mode="equip">装备</div><div class="g85-tab" data-mode="orb">宝珠</div></div>' +
+            '<div class="g85-tabs"><div class="g85-tab on" data-mode="equip">装备</div><div class="g85-tab" data-mode="orb">宝珠</div>' +
+            '<button class="g85-refresh" data-what="orb" type="button" title="刷新宝珠图鉴" style="display:none">刷新</button>' +
+            '<button class="g85-refresh" data-what="equip" type="button" title="刷新装备图鉴">刷新</button></div>' +
             '<div class="g85-load" style="display:none"></div>' +
             '<div class="g85-search"><input placeholder="搜索名字 / 类型…" autocomplete="off"></div>' +
             '<div class="g85-chips g85-cats"></div>' +
             '<div class="g85-chips g85-sub"></div>' +
             '<div class="g85-chips g85-sub2"></div>' +
+            '<div class="g85-chips g85-rar"></div>' +
             '<div class="g85-chips g85-ostat" style="display:none"></div>' +
             '<div class="g85-chips g85-oslot" style="display:none"></div>' +
             '<div class="g85-chips g85-orar" style="display:none"></div>' +
@@ -5957,6 +6171,9 @@
         catWrap = p.querySelector('.g85-cats');
         subWrap = p.querySelector('.g85-sub');
         sub2Wrap = p.querySelector('.g85-sub2');
+        rarWrap = p.querySelector('.g85-rar');
+        refreshEqBtn = p.querySelector('.g85-refresh[data-what="equip"]');
+        refreshOrbBtn = p.querySelector('.g85-refresh[data-what="orb"]');
         countEl = p.querySelector('.g85-count');
         loadEl = p.querySelector('.g85-load');
         searchEl = p.querySelector('.g85-search input');
@@ -5982,6 +6199,14 @@
         });
         buildCatChips();
         buildSubChips();
+        buildRarChips();
+        // v5.101：滚动接近底部自动追加下一批，兜底还有「加载更多」按钮
+        listEl.addEventListener('scroll', () => {
+            if (!renderMoreEl) return;
+            if (listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 160) appendBatch();
+        });
+        if (refreshEqBtn) refreshEqBtn.addEventListener('click', e => { e.stopPropagation(); askRefreshEquip(); });
+        if (refreshOrbBtn) refreshOrbBtn.addEventListener('click', e => { e.stopPropagation(); askRefreshOrbs(); });
         makeChipsDraggable(catWrap);
         makeChipsDraggable(subWrap);
         makeChipsDraggable(sub2Wrap);
@@ -7307,6 +7532,7 @@
 
         // 详情弹窗「打造」跳转修复（游戏原实现先清空 detailItem 再读派生状态，必然失效）
         initDetailCraftFix();
+        initProtectGuard();
 
         // v5.77：仓库装备格子点击只开详情（捕获阶段拦截原生直接取出），详情底部「确认取出」
         initWarehouseEquipDetailGuard();
