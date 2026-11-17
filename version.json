@@ -1,1 +1,1 @@
-{"version":"6.01","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"装备图鉴收纳 Lv85 神器散件（共 1166 条）：新增神器/史诗/传说品质筛选、武器按职业→类型三级分类、分批渲染；宝珠图鉴补回避率映射、缓存失效，宝珠与装备各加二次确认刷新按钮；打造强化/增幅当前等级 ≥10 未勾选保护券时首次点击只提示不执行，勾选后再点一次放行；修复平板调整模块顺序后背包搜索框刚聚焦就被夺焦（功能栏重排与还原逻辑互相争抢父节点）。"}
+{"version":"6.02","url":"https://gh-proxy.com/https://raw.githubusercontent.com/1694385621/DNF-js/main/dnf-helper.js","notes":"修复装备图鉴武器类型中文错位：lswd 实为巨剑、beamswd 实为光剑（游戏资源 Item/weapon/swordman/{lswd,beamswd}.img、攻速 -9/+10、required_skill_id 33 佐证），其余 26 个类型核对一致。"}
