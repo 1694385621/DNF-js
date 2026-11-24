@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      6.02
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情；v5.101 收纳史诗/传说 + Lv85 神器散件共 1,166 条，新增「神器/史诗/传说」品质筛选、武器按职业→类型三级分类、分批渲染，右上角「刷新」需二次确认；首次打开按需加载，ID 段枚举 + 逐件拉取带进度/可停止/失败重试，localStorage 缓存 7 天，内置最小基线兜底）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（174 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存；v5.101 补「回避率」映射、右上角刷新需二次确认）+ 强化/增幅保护券提醒（当前等级 ≥10 且未勾选保护券时，首次点击只提示不执行，勾选后再点一次放行）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
+// @version      6.03
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存；v6.03 消耗品详情同样可存，数量自选）+ 仓库页「一键存仓」（按仓库已有材料/消耗品品类以 item_id 匹配背包同款存入，仓库没有的跳过，原生批量接口、二次确认、面板列匹配品类数/件数/剩余格数/存入明细/跳过项）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情；v5.101 收纳史诗/传说 + Lv85 神器散件共 1,166 条，新增「神器/史诗/传说」品质筛选、武器按职业→类型三级分类、分批渲染，右上角「刷新」需二次确认；首次打开按需加载，ID 段枚举 + 逐件拉取带进度/可停止/失败重试，localStorage 缓存 7 天，内置最小基线兜底）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（174 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存；v5.101 补「回避率」映射、右上角刷新需二次确认）+ 打造页保护券「购买」入口（插件内面板直购商城材料里的强化/增幅保护券，金币支付、买不起置灰说明，不跳转游戏商城）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账；v6.03 未学习的技能先 skill-learn / 被动 tp-learn 再逐级升到目标）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -264,7 +264,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '6.02';
+    const VERSION = '6.03';
 
     /**
      * 游戏接口 GET 统一超时（v5.90）
@@ -3125,83 +3125,6 @@
      *   - 已装备的 → openCraftPageSlot(slot)，打造页选中该部位
      *   - 背包里的 → openCraftPageInstance(item)，打造页选中该件
      */
-    /**
-     * v5.101：强化 / 增幅保护券提醒（拦一次）
-     * ------------------------------------------------------------------
-     * 只读判断：craftMode ∈ {enhance, amplify}、当前等级 ≥ 10、未勾选保护券。
-     * 第一次点击执行按钮只提示、不执行（preventDefault），第二次点击放行；
-     * 勾选保护券后不再提示；同一「模式+当前等级」10 秒内只提示一次。
-     * 不改原生节点、不改原生数字显示，仅读取 store 与勾选框状态。
-     */
-    function initProtectGuard() {
-        if (document.__dnfProtect5101) return;
-        document.__dnfProtect5101 = true;
-        const guard = { pending: null, lastKey: '', lastAt: 0, instance: null, mask: null };
-
-        function resetGuard() { guard.pending = null; guard.lastKey = ''; guard.lastAt = 0; guard.instance = null; }
-        function readProtect(store) {
-            try {
-                if (store && store.craftProtect && typeof store.craftProtect.value === 'boolean') return store.craftProtect.value;
-            } catch (_) { }
-            const mask = document.querySelector('.modal-mask');
-            const cb = mask && Array.from(mask.querySelectorAll('input[type="checkbox"]'))
-                .find(i => /保护券/.test(((i.closest('label') || i.parentElement || {}).textContent || '')));
-            return !!(cb && cb.checked);
-        }
-
-        document.addEventListener('click', (e) => {
-            const node = e.target;
-            if (!node || !node.closest) return;
-            const btn = node.closest('.modal-mask button');
-            if (!btn) return;
-            const label = (btn.textContent || '').trim();
-            if (label !== '强化' && label !== '增幅') return;
-            if (btn.disabled) return;
-
-            const store = getGameStore();
-            if (!store || !store.craftMode || !store.craftMode.value) return;
-            const mode = store.craftMode.value;
-            if (mode !== 'enhance' && mode !== 'amplify') return;
-
-            const mask = btn.closest('.modal-mask');
-            if (guard.mask !== mask) { resetGuard(); guard.mask = mask; }
-
-            const sel = store.selectedCraftItem && store.selectedCraftItem.value;
-            const item = sel ? sel.item : null;
-            if (!item) return;
-            const cost = mode === 'amplify'
-                ? (store.amplifyCost && store.amplifyCost.value)
-                : (store.enhanceCost && store.enhanceCost.value);
-            const target = cost ? Number(cost.target) : NaN;
-            if (!Number.isFinite(target)) return;              // 已到上限/不可执行，不拦
-            const cur = Number(mode === 'amplify' ? item.amplify_level : item.enhance_level) || 0;
-            if (cur < 10) return;                              // +9 冲 +10 不提示
-
-            if (readProtect(store)) { guard.pending = null; return; }
-
-            const inst = String(item.instance_id || item.id || '');
-            if (guard.instance !== inst) { resetGuard(); guard.instance = inst; }
-
-            const key = mode + ':' + cur;
-            const now = Date.now();
-            // 第二次点击放行
-            if (guard.pending && guard.pending.key === key && now - guard.pending.at <= 10000) {
-                guard.pending = null;
-                return;
-            }
-            // 同一模式+等级 10 秒内只提示一次：其余点击直接放行，不重复提示
-            if (guard.lastKey === key && now - guard.lastAt < 10000) return;
-
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            guard.pending = { key: key, at: now };
-            guard.lastKey = key;
-            guard.lastAt = now;
-            const word = mode === 'amplify' ? '增幅' : '强化';
-            showTip('当前' + word + ' +' + cur + ' 未勾选' + word + '保护券，本次未执行；勾选「使用' + word + '保护券」后再点一次');
-        }, true);
-    }
-
     function initDetailCraftFix() {
         if (document.__dnfCraftFix544) return;
         document.__dnfCraftFix544 = true;
@@ -3242,6 +3165,247 @@
     }
 
     /* ============================================================
+     * v6.03：打造页保护券「购买」入口 + 插件内购买面板
+     * ------------------------------------------------------------
+     * 数据源：GET /api/characters/{id}/material-shop
+     *   { gold, shop: [{ item_id, name, price, owned, desc }] }
+     * 购买：POST /api/characters/{id}/material-buy { item_id, count }
+     * 只列商城里的 3 个保护券（8050 装备强化 / 8325 青铜增幅 / 8326 强化增幅），
+     * 名称与价格全部取接口实际值；金币不足或价格异常时置灰并写明原因。
+     * 不跳转游戏商城页面，购买后刷新背包与角色金币。
+     * ============================================================ */
+    const PROTECT_BUY_IDS = [8050, 8325, 8326];
+    let _craftProtectBtn = null;
+    let _protectBuyMask = null;
+    let _protectBuyBusy = false;
+
+    function findCraftProtectLabel() {
+        const masks = document.querySelectorAll('.modal-mask');
+        for (const m of masks) {
+            if ((m.textContent || '').indexOf('打造') === -1) continue;
+            const opts = m.querySelector('.curse-opts');
+            if (!opts) continue;
+            const label = Array.prototype.find.call(opts.querySelectorAll('label'),
+                l => /保护券/.test(l.textContent || ''));
+            if (label) return label;
+        }
+        return null;
+    }
+
+    function applyCraftProtectBuyButton() {
+        const label = findCraftProtectLabel();
+        if (!label) {
+            if (_craftProtectBtn) { _craftProtectBtn.remove(); _craftProtectBtn = null; }
+            return;
+        }
+        let btn = label.parentElement.querySelector('[data-dnf-protect-buy]');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.type = 'button';
+            btn.setAttribute('data-dnf-protect-buy', '1');
+            btn.textContent = '购买';
+            btn.title = '打开插件内的保护券购买面板（不跳转游戏商城）';
+            btn.style.cssText = 'margin-left:6px;padding:2px 8px;border-radius:4px;cursor:pointer;' +
+                'border:1px solid #9b7645;background:#2a2118;color:#ffd794;font:12px/1.5 Microsoft YaHei,sans-serif';
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const store = getGameStore();
+                if (!store) { showTip('未找到游戏状态，无法购买'); return; }
+                openProtectBuyPanel(store);
+            });
+            label.insertAdjacentElement('afterend', btn);
+        }
+        _craftProtectBtn = btn;
+    }
+
+    function closeProtectBuyPanel() {
+        if (_protectBuyMask && _protectBuyMask.parentNode) _protectBuyMask.parentNode.removeChild(_protectBuyMask);
+        _protectBuyMask = null;
+    }
+
+    function protectBuyRow(item, state) {
+        const row = document.createElement('div');
+        row.setAttribute('data-dnf-protect-row', String(item.item_id));
+        row.style.cssText = 'border:1px solid #3f3123;border-radius:6px;background:#1a130c;padding:8px 10px;margin-bottom:8px';
+        const head = document.createElement('div');
+        head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap';
+        const name = document.createElement('div');
+        name.textContent = item.name;
+        name.style.cssText = 'color:#ffd794;font-weight:700;font-size:13px';
+        const owned = document.createElement('div');
+        owned.className = 'dnf-protect-owned';
+        owned.textContent = '持有 ' + (Number(item.owned) || 0);
+        owned.style.cssText = 'color:#baa78e;font-size:12px';
+        head.append(name, owned);
+
+        const price = document.createElement('div');
+        price.style.cssText = 'color:#c8b593;font-size:12px;margin:4px 0 6px';
+        price.textContent = '价格 ' + (Number(item.price) || 0).toLocaleString('zh-CN') + ' 金币 / 个';
+
+        const ctl = document.createElement('div');
+        ctl.className = 'dnf-qty-row';
+        ctl.style.margin = '0';
+        const qtyLabel = document.createElement('span');
+        qtyLabel.className = 'dnf-qty-label';
+        qtyLabel.textContent = '数量';
+        const input = document.createElement('input');
+        input.className = 'dnf-qty-input';
+        input.type = 'number';
+        input.min = '1';
+        input.max = '99';
+        input.step = '1';
+        input.value = '1';
+        input.style.width = '80px';
+        const buy = document.createElement('button');
+        buy.type = 'button';
+        buy.className = 'dnf-qty-ok';
+        buy.textContent = '购买';
+        const msg = document.createElement('div');
+        msg.className = 'dnf-qty-msg';
+        ctl.append(qtyLabel, input, buy);
+
+        const clampQty = () => {
+            let n = parseInt(input.value, 10);
+            if (!Number.isFinite(n) || n < 1) n = 1;
+            if (n > 99) n = 99;
+            input.value = String(n);
+            return n;
+        };
+        const refreshAfford = () => {
+            const n = clampQty();
+            const total = (Number(item.price) || 0) * n;
+            const gold = Number(state.gold) || 0;
+            const badPrice = !(Number(item.price) > 0);
+            const short = gold < total;
+            buy.disabled = badPrice || short || _protectBuyBusy;
+            buy.textContent = '购买' + (n > 1 ? ' ×' + n : '');
+            msg.classList.remove('is-err');
+            if (badPrice) msg.textContent = '该保护券当前不可购买（价格异常）';
+            else if (short) msg.textContent = '金币不足：需 ' + total.toLocaleString('zh-CN')
+                + '，持有 ' + gold.toLocaleString('zh-CN');
+            else msg.textContent = '合计 ' + total.toLocaleString('zh-CN') + ' 金币';
+            if (badPrice || short) msg.classList.add('is-err');
+        };
+        input.addEventListener('input', () => { if (String(input.value || '').trim()) refreshAfford(); });
+        input.addEventListener('change', refreshAfford);
+        buy.addEventListener('click', async () => {
+            if (_protectBuyBusy) return;
+            const n = clampQty();
+            const total = (Number(item.price) || 0) * n;
+            if (!(Number(item.price) > 0)) return;
+            if ((Number(state.gold) || 0) < total) { refreshAfford(); return; }
+            _protectBuyBusy = true;
+            buy.disabled = true;
+            input.disabled = true;
+            buy.textContent = '购买中…';
+            msg.classList.remove('is-err');
+            msg.textContent = '';
+            try {
+                await postCharacterApi(state.store, 'material-buy',
+                    { item_id: Number(item.item_id), count: n }, 15000, '购买失败');
+                showTip('已购买 ' + item.name + ' ×' + n);
+                try { if (typeof state.store.loadInventory === 'function') await state.store.loadInventory(); } catch (_) {}
+                try { if (typeof state.store.refreshSettle === 'function') await state.store.refreshSettle(); } catch (_) {}
+                _protectBuyBusy = false;
+                state.reload();
+            } catch (err) {
+                msg.textContent = (err && err.message) ? err.message : '购买失败，请稍后重试';
+                msg.classList.add('is-err');
+                buy.disabled = false;
+                input.disabled = false;
+                _protectBuyBusy = false;
+                refreshAfford();
+            }
+        });
+        refreshAfford();
+        row.append(head, price, ctl, msg);
+        return row;
+    }
+
+    function openProtectBuyPanel(store) {
+        closeProtectBuyPanel();
+        const mask = document.createElement('div');
+        mask.className = 'dnf-qty-mask';
+        mask.setAttribute('data-dnf-protect-buy-panel', '1');
+        _protectBuyMask = mask;
+        const panel = document.createElement('div');
+        panel.className = 'dnf-qty-panel';
+        panel.style.width = 'min(460px,calc(100vw - 32px))';
+        const title = document.createElement('div');
+        title.className = 'dnf-qty-title';
+        title.textContent = '保护券购买';
+        const sub = document.createElement('div');
+        sub.className = 'dnf-qty-sub';
+        sub.textContent = '读取商城材料中…';
+        const body = document.createElement('div');
+        const foot = document.createElement('div');
+        foot.className = 'dnf-qty-actions';
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.className = 'dnf-qty-cancel';
+        close.textContent = '关闭';
+        close.addEventListener('click', closeProtectBuyPanel);
+        foot.append(close);
+        mask.addEventListener('click', (e) => { if (e.target === mask) closeProtectBuyPanel(); });
+        panel.addEventListener('click', (e) => e.stopPropagation());
+        panel.append(title, sub, body, foot);
+        mask.appendChild(panel);
+        document.body.appendChild(mask);
+
+        const state = {
+            store,
+            gold: 0,
+            reload: async () => {
+                body.textContent = '读取中…';
+                let data = null;
+                try {
+                    const charId = store.charId ? store.charId.value : null;
+                    data = await fetchJson('/api/characters/' + charId + '/material-shop');
+                } catch (err) {
+                    body.textContent = '';
+                    const e = document.createElement('div');
+                    e.className = 'dnf-qty-msg';
+                    e.style.color = '#ff9a9a';
+                    e.textContent = '读取商城材料失败：' + (err && err.message ? err.message : '未知错误');
+                    body.append(e);
+                    return;
+                }
+                const shop = Array.isArray(data && data.shop) ? data.shop : [];
+                state.gold = Number(data && data.gold) || 0;
+                sub.textContent = '商城材料 · 金币支付 · 当前金币 ' + state.gold.toLocaleString('zh-CN');
+                let rows = shop.filter(x => x && PROTECT_BUY_IDS.indexOf(Number(x.item_id)) !== -1);
+                if (!rows.length) rows = shop.filter(x => x && /保护券/.test(x.name || ''));
+                body.textContent = '';
+                if (!rows.length) {
+                    const e = document.createElement('div');
+                    e.className = 'dnf-qty-msg';
+                    e.textContent = '商城材料中没有找到保护券。';
+                    body.append(e);
+                    return;
+                }
+                const enhance = rows.filter(x => Number(x.item_id) === 8050);
+                const amplify = rows.filter(x => Number(x.item_id) !== 8050);
+                const section = (label, items) => {
+                    if (!items.length) return;
+                    const h = document.createElement('div');
+                    h.textContent = label;
+                    h.style.cssText = 'color:#ffd794;font-weight:700;font-size:13px;margin:2px 0 6px';
+                    body.append(h);
+                    items.forEach(x => body.append(protectBuyRow(x, state)));
+                };
+                section('强化保护券', enhance);
+                section('增幅保护券', amplify);
+                const tip = document.createElement('div');
+                tip.className = 'dnf-qty-msg';
+                tip.textContent = '购买后金币与持有数会立即刷新；不跳转游戏商城页面。';
+                body.append(tip);
+            }
+        };
+        state.reload();
+    }
+
+    /* ============================================================
      * 物品详情「存仓」按钮（v5.68）
      *
      * 需求：背包【装备】/【材料】标签的物品详情弹窗里能直接存入共享仓库。
@@ -3260,6 +3424,17 @@
     /* v5.91：详情页「分解」按钮的请求节流，避免连点并发 */
     let _decomposeBusy = false;
 
+    // v6.03：与游戏 warehouse-deposit-batch 的 du 过滤保持一致（这四件不参与存入）
+    const DEPOSIT_EXCLUDED_IDS = new Set([1, 690000111, 202, 2660417]);
+
+    // v6.03：药剂等消耗品的详情接口不带 count（返回 0），实际持有数在 detailInInventory 里
+    function detailStackCount(store, item) {
+        const inBag = store && store.detailInInventory ? store.detailInInventory.value : null;
+        const n = Number(inBag && inBag.count);
+        if (Number.isFinite(n) && n > 0) return n;
+        return Math.max(0, Number(item && item.count) || 0);
+    }
+
     function depositDisabledReason(store, item) {
         if (!item) return '没有可存入的物品';
         const slot = store.detailEquippedSlot ? store.detailEquippedSlot.value : '';
@@ -3276,7 +3451,12 @@
             if (!(Number(item.instance_id) > 0)) return '该装备没有实例编号，无法存入';
             return '';
         }
-        if (!(Number(item.count) > 0)) return '该物品数量不足，无法存入';
+        if (!(detailStackCount(store, item) > 0)) return '该物品数量不足，无法存入';
+        if (DEPOSIT_EXCLUDED_IDS.has(Number(item.item_id))) return '该物品不可存入仓库（特殊道具）';
+        // v6.03：消耗品/药剂不在游戏内部「可存材料」白名单里，但仓库接口支持存入；
+        // 只在详情页放开，绑定/不可存的道具仍由服务端返回错误。
+        if (item.kind === 'consumable' || item.kind === 'potion') return '';
+        if (item.kind === 'clearbox' || item.kind === 'avatar') return '该物品不可存入仓库（特殊道具）';
         // 游戏内部 warehouseDepositItems 就是「可存入材料」白名单（排除消耗品与特殊/绑定道具）
         const list = store.warehouseDepositItems ? store.warehouseDepositItems.value : null;
         if (Array.isArray(list) && !list.some(x => x && x.item_id === item.item_id)) {
@@ -3347,7 +3527,7 @@
         let qty = 1;
         const input = box.querySelector('.dnf-deposit-qty');
         if (!isEquip) {
-            const max = Math.max(1, Number(item.count) || 0);
+            const max = Math.max(1, detailStackCount(store, item));
             if (input) {
                 let n = parseInt(input.value, 10);
                 if (!Number.isFinite(n) || n < 1) n = max;
@@ -3429,12 +3609,15 @@
         if (!mask || !actions || !item) return;
         if (!store.tab || store.tab.value !== 'bag') return;
         const sub = store.bagSub ? store.bagSub.value : '';
-        if (sub !== 'equip' && sub !== 'material') return;
+        // v6.03：消耗品（potion）详情也注入存仓按钮
+        if (sub !== 'equip' && sub !== 'material' && sub !== 'consume') return;
         if (sub === 'equip' && item.kind !== 'equipment') return;
-        if (sub === 'material' && item.kind === 'equipment') return;
+        if (sub !== 'equip' && item.kind === 'equipment') return;
+        if (sub === 'material' && (item.kind === 'consumable' || item.kind === 'potion')) return;
 
+        const stackCount = detailStackCount(store, item);
         const reason = depositDisabledReason(store, item);
-        const key = [sub, item.kind, item.instance_id || 0, item.item_id, item.count,
+        const key = [sub, item.kind, item.instance_id || 0, item.item_id, stackCount,
             item.locked ? 1 : 0, reason].join('|');
 
         const existing = actions.querySelector('[data-dnf-deposit-box]');
@@ -3448,7 +3631,7 @@
         _depositBoxEl = box;
 
         // 材料可堆叠时给数量输入：默认整组，可改，上限=持有数
-        if (item.kind !== 'equipment' && Number(item.count) > 1) {
+        if (item.kind !== 'equipment' && stackCount > 1) {
             const label = document.createElement('span');
             label.className = 'dnf-deposit-label';
             label.textContent = '数量';
@@ -3456,13 +3639,13 @@
             input.type = 'number';
             input.className = 'dnf-deposit-qty';
             input.min = '1';
-            input.max = String(item.count);
+            input.max = String(stackCount);
             input.step = '1';
-            input.value = String(item.count);
-            input.title = '存入数量（最多 ' + item.count + ' 个）';
+            input.value = String(stackCount);
+            input.title = '存入数量（最多 ' + stackCount + ' 个）';
             input.setAttribute('aria-label', '存入数量');
             input.addEventListener('input', () => {
-                const max = Math.max(1, Number(item.count) || 1);
+                const max = Math.max(1, stackCount);
                 let n = parseInt(input.value, 10);
                 if (!Number.isFinite(n) || n < 1) return; // 允许暂时清空输入
                 if (n > max) { n = max; input.value = String(n); }
@@ -3501,6 +3684,247 @@
         }
         box.append(msg);
         actions.appendChild(box);
+    }
+
+    /* ============================================================
+     * v6.03：仓库页「一键存仓」（按仓库已有品类匹配）
+     * ------------------------------------------------------------
+     * 语义：先看仓库现有哪些材料/消耗品，只把背包中同款（同 item_id）
+     * 的那些一次性存进去；仓库没有的品类不动。
+     *   - 匹配键固定 item_id，不按名字（仓库道具名可能带前后空格）；
+     *   - 只处理材料（material）与消耗品（potion / consumable），装备不参与；
+     *   - 排除游戏自身 du 过滤里的 4 个特殊 ID；
+     *   - 复用原生批量接口 POST warehouse-deposit-batch
+     *     { instance_ids: [], items: [{ item_id, count }] }，
+     *     一次请求提交全部条目，返回 { moved, skipped, view }。
+     * ============================================================ */
+    const QUICK_DEPOSIT_KINDS = { material: 1, consumable: 1, potion: 1 };
+    let _quickDepositBtn = null;
+    let _quickDepositBusy = false;
+    let _quickDepositMask = null;
+
+    /** 仓库已有道具的 item_id 集合（堆叠物品在 warehouse.items，装备在 equipment） */
+    function warehouseItemIdSet(store) {
+        const wh = store && store.warehouse ? store.warehouse.value : null;
+        const ids = new Set();
+        const list = wh && Array.isArray(wh.items) ? wh.items : [];
+        for (const x of list) {
+            const id = x ? Number(x.item_id) : 0;
+            if (id > 0) ids.add(id);
+        }
+        return ids;
+    }
+
+    function trimmedItemName(item) {
+        return String((item && item.name) || '未命名道具').trim();
+    }
+
+    /**
+     * 生成一键存仓计划：
+     *   items   将存入的条目（同 item_id 已合并数量）
+     *   skipped 背包有、但仓库没有同 item_id 的材料/消耗品（不处理，仅面板提示）
+     */
+    function quickDepositPlan(store) {
+        const inv = store && store.inventory ? store.inventory.value : null;
+        const whIds = warehouseItemIdSet(store);
+        const plan = { items: [], skipped: [], groups: 0, total: 0, haveWarehouse: whIds.size > 0 };
+        if (!Array.isArray(inv)) return plan;
+        const byId = new Map();
+        for (const x of inv) {
+            if (!x || !QUICK_DEPOSIT_KINDS[x.kind]) continue;
+            const count = Math.floor(Number(x.count) || 0);
+            if (count <= 0) continue;
+            const id = Number(x.item_id);
+            if (!(id > 0) || DEPOSIT_EXCLUDED_IDS.has(id)) continue;
+            if (!whIds.has(id)) {
+                plan.skipped.push({ item_id: id, name: trimmedItemName(x), count: count });
+                continue;
+            }
+            const hit = byId.get(id);
+            if (hit) hit.count += count;
+            else byId.set(id, { item_id: id, name: trimmedItemName(x), count: count });
+        }
+        plan.items = Array.from(byId.values());
+        plan.groups = plan.items.length;
+        plan.total = plan.items.reduce((sum, x) => sum + x.count, 0);
+        return plan;
+    }
+
+    function closeQuickDepositConfirm() {
+        if (_quickDepositMask && _quickDepositMask.parentNode) _quickDepositMask.parentNode.removeChild(_quickDepositMask);
+        _quickDepositMask = null;
+    }
+
+    function openQuickDepositConfirm(store, plan) {
+        closeQuickDepositConfirm();
+        const items = plan.items;
+        const wh = store.warehouse ? store.warehouse.value : null;
+        const remain = wh ? Math.max(0, Number(wh.capacity) - Number(wh.used)) : null;
+
+        const mask = document.createElement('div');
+        mask.className = 'dnf-qty-mask';
+        mask.setAttribute('data-dnf-quick-deposit-panel', '1');
+        _quickDepositMask = mask;
+        const panel = document.createElement('div');
+        panel.className = 'dnf-qty-panel';
+        panel.style.width = 'min(480px,calc(100vw - 32px))';
+
+        const title = document.createElement('div');
+        title.className = 'dnf-qty-title';
+        title.textContent = '一键存仓（按仓库已有品类匹配）';
+        const sub = document.createElement('div');
+        sub.className = 'dnf-qty-sub';
+        sub.textContent = '匹配仓库已有 ' + plan.groups + ' 个品类 · 涉及背包 ' + plan.groups + ' 组 / 共 '
+            + plan.total + ' 件' + (remain == null ? '' : ' · 仓库剩余 ' + remain + ' 格');
+
+        const list = document.createElement('div');
+        list.style.cssText = 'max-height:220px;overflow:auto;border:1px solid #3f3123;border-radius:6px;' +
+            'background:#1a130c;padding:6px 8px;font:12px/1.6 Microsoft YaHei,sans-serif;color:#c8b593;margin-bottom:8px';
+
+        const headRow = (text, color) => {
+            const d = document.createElement('div');
+            d.style.cssText = 'margin:2px 0;color:' + color + ';font-weight:600';
+            d.textContent = text;
+            return d;
+        };
+        const itemRow = (name, count, extra) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;justify-content:space-between;gap:12px;padding:1px 0';
+            const n = document.createElement('span');
+            n.style.cssText = 'min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+            n.textContent = name + (extra || '');
+            n.title = name;
+            const c = document.createElement('span');
+            c.style.cssText = 'flex:0 0 auto;color:#e8d3ad';
+            c.textContent = '×' + count;
+            row.append(n, c);
+            return row;
+        };
+
+        list.appendChild(headRow('将存入（' + plan.groups + ' 个品类 / 共 ' + plan.total + ' 件）', '#ffd794'));
+        items.forEach(x => list.appendChild(itemRow(x.name, x.count, '')));
+        if (plan.skipped.length) {
+            list.appendChild(headRow('仓库没有同款而跳过（' + plan.skipped.length + ' 组）', '#d9a06b'));
+            plan.skipped.forEach(x => list.appendChild(itemRow(x.name, x.count, ' · 仓库无此品类')));
+        }
+
+        const tip = document.createElement('div');
+        tip.className = 'dnf-qty-msg';
+        tip.textContent = '仅存入与仓库 item_id 相同的材料与消耗品；同款会并入仓库已有堆叠，装备不参与。'
+            + (plan.skipped.length ? ' 被跳过的物品仍留在背包。' : '');
+
+        const msg = document.createElement('div');
+        msg.className = 'dnf-qty-msg';
+
+        const actions = document.createElement('div');
+        actions.className = 'dnf-qty-actions';
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'dnf-qty-cancel';
+        cancel.textContent = '取消';
+        const ok = document.createElement('button');
+        ok.type = 'button';
+        ok.className = 'dnf-qty-ok';
+        ok.textContent = plan.skipped.length ? '存入 ' + plan.groups + ' 组' : '全部存入';
+        actions.append(cancel, ok);
+
+        cancel.addEventListener('click', closeQuickDepositConfirm);
+        mask.addEventListener('click', (e) => { if (e.target === mask) closeQuickDepositConfirm(); });
+        panel.addEventListener('click', (e) => e.stopPropagation());
+
+        ok.addEventListener('click', async () => {
+            if (_quickDepositBusy) return;
+            _quickDepositBusy = true;
+            ok.disabled = true;
+            cancel.disabled = true;
+            ok.textContent = '存入中…';
+            msg.textContent = '';
+            msg.classList.remove('is-err', 'is-ok');
+            try {
+                const data = await postCharacterApi(store, 'warehouse-deposit-batch', {
+                    instance_ids: [],
+                    items: items.map(x => ({ item_id: Number(x.item_id), count: Number(x.count) }))
+                }, 20000, '批量存入失败');
+                if (data && data.view && store.warehouse) store.warehouse.value = data.view;
+                const moved = Number(data && data.moved) || 0;
+                const skipped = Number(data && data.skipped) || 0;
+                showTip('已存入 ' + moved + ' 组' + (skipped ? '，跳过 ' + skipped + ' 组' : ''));
+                closeQuickDepositConfirm();
+                try {
+                    const tasks = [];
+                    if (typeof store.loadInventory === 'function') tasks.push(store.loadInventory());
+                    if (typeof store.loadWarehouse === 'function') tasks.push(store.loadWarehouse());
+                    if (tasks.length) await Promise.all(tasks);
+                } catch (refreshErr) {
+                    log('[一键存仓] 已存入但刷新失败:', refreshErr && refreshErr.message);
+                }
+            } catch (err) {
+                msg.textContent = (err && err.message) ? err.message : '批量存入失败，请稍后重试';
+                msg.classList.add('is-err');
+                ok.disabled = false;
+                cancel.disabled = false;
+                ok.textContent = '重试存入';
+            } finally {
+                _quickDepositBusy = false;
+            }
+        });
+
+        panel.append(title, sub, list, tip, msg, actions);
+        mask.appendChild(panel);
+        document.body.appendChild(mask);
+    }
+
+    function applyWarehouseQuickDeposit() {
+        const store = getGameStore();
+        const isWh = !!(store && store.tab && store.tab.value === 'bag'
+            && store.bagSub && store.bagSub.value === 'warehouse');
+        if (_quickDepositBtn && (!_quickDepositBtn.isConnected || !isWh)) {
+            _quickDepositBtn.remove();
+            _quickDepositBtn = null;
+        }
+        if (!isWh) return;
+        const tab = document.querySelector('.bag-tab');
+        if (!tab) return;
+        const toolbar = Array.prototype.find.call(tab.children, c => c && c.classList && c.classList.contains('bag-toolbar'));
+        if (!toolbar) return;
+
+        let btn = toolbar.querySelector('[data-dnf-quick-deposit]');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'sm';
+            btn.setAttribute('data-dnf-quick-deposit', '1');
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const st = getGameStore();
+                const plan = quickDepositPlan(st);
+                if (!plan.haveWarehouse) {
+                    showTip('仓库里还没有材料或消耗品，无法按已有品类匹配存入');
+                    return;
+                }
+                if (!plan.groups) {
+                    showTip(plan.skipped.length
+                        ? '背包里的材料/消耗品仓库都没有同款（item_id 不匹配），已跳过 ' + plan.skipped.length + ' 组'
+                        : '背包里没有可存入的材料或消耗品');
+                    return;
+                }
+                openQuickDepositConfirm(st, plan);
+            });
+            toolbar.appendChild(btn);
+        }
+        _quickDepositBtn = btn;
+        const plan = quickDepositPlan(store);
+        // 0 匹配时保持可点击：点击后明确提示原因，不做静默无反应
+        btn.disabled = false;
+        btn.textContent = '一键存仓' + (plan.groups ? '（' + plan.groups + '）' : '');
+        btn.title = !plan.haveWarehouse
+            ? '仓库里还没有材料或消耗品，无法按已有品类匹配'
+            : (plan.groups
+                ? '把背包中与仓库同款（item_id 相同）的 ' + plan.groups + ' 组材料/消耗品一次性存入'
+                : (plan.skipped.length
+                    ? '背包中的材料/消耗品仓库都没有同款，暂无可以一键存入的物品'
+                    : '背包中没有可存入的材料或消耗品'));
     }
 
     /* ============================================================
@@ -4762,6 +5186,8 @@
         applyDetailDepositButton();
         applyNativeProfileCopyButton();
         applyWarehouseWithdrawBox();
+        applyWarehouseQuickDeposit();
+        applyCraftProtectBuyButton();
         applyClearBoxAllButton();
     }
     function runScans() {
@@ -6979,14 +7405,24 @@
         const store = getGameStore();
         if (!store || !store.character || !store.character.value) throw new Error('未找到当前角色');
         const me = store.character.value;
-        const [skills, loadout] = await Promise.all([
+        const [skills, loadout, shopData] = await Promise.all([
             getMyCharApi(store, 'skills'),
-            getMyCharApi(store, 'skill-loadout')
+            getMyCharApi(store, 'skill-loadout'),
+            getMyCharApi(store, 'skill-shop')
         ]);
 
         const myEntries = [];
         for (const s of (skills.skills || [])) myEntries.push({ s, group: 'active' });
         for (const s of (skills.passives || [])) myEntries.push({ s, group: 'passive' });
+        const myIds = new Set(myEntries.map(x => Number(x.s.id)));
+
+        // v6.03：skill-shop 含「未学习」技能的完整元数据（max/sp/tp/req_level/starter），
+        // 用于对方有、自己还没学的技能。老逻辑只遍历自己 /skills 返回的已学列表，
+        // 未学技能永远进不了计划，这就是「复制技能不会学习未学习技能」的根因。
+        const shopActive = new Map();
+        const shopPassive = new Map();
+        for (const s of (shopData.shop || [])) shopActive.set(Number(s.id), s);
+        for (const s of (shopData.passive_shop || [])) shopPassive.set(Number(s.id), s);
 
         const otherActive = new Map();
         const otherPassive = new Map();
@@ -7061,6 +7497,56 @@
                     spCost, tpCost,
                     costSp: isTp ? 0 : levels * spCost,
                     costTp: isTp ? levels * (tpCost || 1) : 0
+                });
+            }
+        }
+
+        // v6.03：对方有、自己背包里完全没有的技能（learned_level=0）。
+        // 元数据取自 skill-shop；执行时 raiseSkillTo 会先 skill-learn（被动 tp-learn）再逐级升。
+        // 注意 shop 的 block_reason='sp' 只是「当前 SP 不够」，阶段一归零后会返还，不能据此拦截。
+        const otherOnlyGroups = [
+            { map: otherActive, group: 'active', shop: shopActive },
+            { map: otherPassive, group: 'passive', shop: shopPassive }
+        ];
+        for (const { map, group, shop } of otherOnlyGroups) {
+            for (const [id, oth] of map) {
+                if (myIds.has(id)) continue;
+                const meta = shop.get(id);
+                const name = (meta && meta.name) || oth.name || ('技能 ' + id);
+                if (!meta) {
+                    skipped.push({ name: name, reason: '技能商店中没有该技能，无法学习' });
+                    continue;
+                }
+                if (meta.auto_granted || meta.automatic) {
+                    skipped.push({ name: name, reason: '自动习得，无法调整' });
+                    continue;
+                }
+                const max = Math.max(0, Number(meta.max_level) || Number(oth.max_level) || 0);
+                let tgt = Number(oth.learned_level);
+                if (!Number.isFinite(tgt)) tgt = Number(oth.eff_level) || 0;
+                tgt = Math.max(0, Math.min(max, tgt));
+                const starter = !!meta.starter;
+                if (group === 'active' && starter && tgt < 1) tgt = 1;
+                if (!(tgt > 0)) continue;
+
+                const isTp = group === 'passive' && (meta.passive_kind === 'tp'
+                    || (Number(meta.tp_cost) > 0 && !(Number(meta.sp_cost) > 0)));
+                const spCost = Number(meta.sp_cost) || 0;
+                const tpCost = Number(meta.tp_cost) || 0;
+                const reqLevel = Number(meta.req_level) || 0;
+                const blocked = meta.block_reason === 'awakening' || meta.block_reason === 'level'
+                    || meta.block_reason === 'base' || (reqLevel > 0 && reqLevel > (Number(me.level) || 0));
+                if (blocked) {
+                    skipped.push({ name: name, reason: meta.block_text || '当前无法学习（等级/觉醒限制）' });
+                    continue;
+                }
+                targets.push({ id, name, target: tgt, group });
+                raiseItems.push({
+                    id, name, group, isTp,
+                    from: 0, to: tgt, max, reqLevel,
+                    spCost, tpCost,
+                    costSp: isTp ? 0 : tgt * spCost,
+                    costTp: isTp ? tgt * (tpCost || 1) : 0
                 });
             }
         }
@@ -7219,7 +7705,10 @@
         }
 
         // 升级清单
-        const u = sec('将升级（' + plan.raiseItems.length + ' 项，消耗 SP ' + plan.costSp
+        const newLearnCount = plan.raiseOrder.filter(x => x.from === 0).length;
+        const u = sec('将学习/升级（' + plan.raiseItems.length + ' 项'
+            + (newLearnCount ? '，其中新学 ' + newLearnCount + ' 项' : '')
+            + '，消耗 SP ' + plan.costSp
             + (plan.costTp ? ' / TP ' + plan.costTp : '') + '）');
         if (!plan.raiseItems.length) {
             u.append(uiEl('div', 'dnf-cp-tip', '无'));
@@ -7534,7 +8023,6 @@
 
         // 详情弹窗「打造」跳转修复（游戏原实现先清空 detailItem 再读派生状态，必然失效）
         initDetailCraftFix();
-        initProtectGuard();
 
         // v5.77：仓库装备格子点击只开详情（捕获阶段拦截原生直接取出），详情底部「确认取出」
         initWarehouseEquipDetailGuard();
