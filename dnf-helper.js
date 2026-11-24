@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      6.03
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存；v6.03 消耗品详情同样可存，数量自选）+ 仓库页「一键存仓」（按仓库已有材料/消耗品品类以 item_id 匹配背包同款存入，仓库没有的跳过，原生批量接口、二次确认、面板列匹配品类数/件数/剩余格数/存入明细/跳过项）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 屏蔽游戏自带挂机浮窗（可开关）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情；v5.101 收纳史诗/传说 + Lv85 神器散件共 1,166 条，新增「神器/史诗/传说」品质筛选、武器按职业→类型三级分类、分批渲染，右上角「刷新」需二次确认；首次打开按需加载，ID 段枚举 + 逐件拉取带进度/可停止/失败重试，localStorage 缓存 7 天，内置最小基线兜底）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（174 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存；v5.101 补「回避率」映射、右上角刷新需二次确认）+ 打造页保护券「购买」入口（插件内面板直购商城材料里的强化/增幅保护券，金币支付、买不起置灰说明，不跳转游戏商城）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账；v6.03 未学习的技能先 skill-learn / 被动 tp-learn 再逐级升到目标）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
+// @version      6.04
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存；v6.03 消耗品详情同样可存，数量自选）+ 仓库页「一键存仓」（按仓库已有品类以 item_id 匹配背包同款，面板逐品类勾选排除、底部实时显示将存入组数/件数，全部取消时置灰；一次批量提交）+ 背包装备页「按打造程度排序」（强化/增幅/综合降序，仅写 CSS order，与原生筛选、稀有度整理、多选共存，默认顺序完全还原）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 隐藏游戏原挂机助手光标/光球（入口在挂机浮窗「挂机页设置」区，沿用原隐藏与恢复逻辑）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情；v5.101 收纳史诗/传说 + Lv85 神器散件共 1,166 条，新增「神器/史诗/传说」品质筛选、武器按职业→类型三级分类、分批渲染，右上角「刷新」需二次确认；首次打开按需加载，ID 段枚举 + 逐件拉取带进度/可停止/失败重试，localStorage 缓存 7 天，内置最小基线兜底）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（174 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存；v5.101 补「回避率」映射、右上角刷新需二次确认）+ 打造页保护券「购买」入口（插件内面板直购商城材料里的强化/增幅保护券，金币支付、买不起置灰说明，不跳转游戏商城）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账；v6.03 未学习的技能先 skill-learn / 被动 tp-learn 再逐级升到目标）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -194,7 +194,7 @@
     function renderSettingsPanel() {
         if(!settingsPanelEl?.isConnected)return;
         const body=settingsPanelEl.querySelector('.dnf-settings-body');
-        const options=[['屏蔽挂机浮窗','hideGameAssistant','隐藏游戏原生挂机浮窗/折叠球（可恢复）'],['功能栏下移','relocateTabsAfterSettlement','功能栏放到最近结算下方'],['特性技能过滤','hideUnlearnedSkills','只显示已学前置的特性'],['统一 UI 主题','uiTheme','深色底、金色边框'],['诊断信息','debugHud','显示血条同步状态'],['启动时自动检查更新','autoCheckUpdate','读 version.json，只提示不自动安装']];
+        const options=[['功能栏下移','relocateTabsAfterSettlement','功能栏放到最近结算下方'],['特性技能过滤','hideUnlearnedSkills','只显示已学前置的特性'],['统一 UI 主题','uiTheme','深色底、金色边框'],['诊断信息','debugHud','显示血条同步状态'],['启动时自动检查更新','autoCheckUpdate','读 version.json，只提示不自动安装']];
         body.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:8px">'+options.map(args=>'<div style="padding:8px 10px;border:1px solid #56422f;border-radius:8px;background:#2b2118">'+renderSettingsRow(...args)+'</div>').join('')+'</div>'+(moduleLayoutMode()!=='desktop'?'<div style="margin-top:12px">'+renderModuleOrderRows()+'</div>':'')+renderUpdateBlock();
         body.querySelectorAll('[data-setkey]').forEach(el=>{el.setAttribute('role','switch');el.tabIndex=0;el.setAttribute('aria-checked',String(CONFIG[el.dataset.setkey]));el.setAttribute('aria-label',options.find(o=>o[1]===el.dataset.setkey)[0]);el.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();el.click();}});});
         bindSettingsToggles(body);
@@ -264,7 +264,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '6.03';
+    const VERSION = '6.04';
 
     /**
      * 游戏接口 GET 统一超时（v5.90）
@@ -1681,6 +1681,11 @@
         if (CONFIG.debugHud && bloodBarStatusText) {
             lines.push('血条同步: <span style="color:#8ecaff">' + escHtml(bloodBarStatusText) + '</span>');
         }
+        // 挂机页自己的设置区（v6.04：原挂机助手光球开关从主设置面板迁到这里）
+        lines.push('<div style="border-top:1px dashed rgba(255,184,77,0.25);margin:6px 0 4px"></div>');
+        lines.push('<div style="font-size:11px;color:#a79070;margin-bottom:2px">挂机页设置</div>');
+        lines.push(renderSettingsRow('隐藏游戏原挂机助手光标（光球）', 'hideGameAssistant',
+            '勾选后隐藏原生挂机助手的光球/悬浮窗，取消恢复'));
 
         const html = lines.join('<br>');
         if (html === hudLastHtml) return;   // 内容没变：不重建 DOM，保住滚动位置与点击态
@@ -3781,37 +3786,49 @@
         list.style.cssText = 'max-height:220px;overflow:auto;border:1px solid #3f3123;border-radius:6px;' +
             'background:#1a130c;padding:6px 8px;font:12px/1.6 Microsoft YaHei,sans-serif;color:#c8b593;margin-bottom:8px';
 
+        const selected = new Set(items.map(x => Number(x.item_id)));
+        const statLine = document.createElement('div');
+        statLine.className = 'dnf-qty-sub';
+
         const headRow = (text, color) => {
             const d = document.createElement('div');
             d.style.cssText = 'margin:2px 0;color:' + color + ';font-weight:600';
             d.textContent = text;
             return d;
         };
-        const itemRow = (name, count, extra) => {
-            const row = document.createElement('div');
-            row.style.cssText = 'display:flex;justify-content:space-between;gap:12px;padding:1px 0';
+
+        list.appendChild(headRow('可存入品类（默认全选，取消勾选即不存）', '#ffd794'));
+        items.forEach(x => {
+            const row = document.createElement('label');
+            row.style.cssText = 'display:flex;align-items:center;gap:8px;justify-content:space-between;' +
+                'padding:2px 0;cursor:pointer';
+            const left = document.createElement('span');
+            left.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = true;
+            cb.setAttribute('data-dnf-quick-deposit-item', String(x.item_id));
+            cb.style.cssText = 'flex:0 0 auto;margin:0;accent-color:#c08b4a';
             const n = document.createElement('span');
             n.style.cssText = 'min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
-            n.textContent = name + (extra || '');
-            n.title = name;
+            n.textContent = x.name;
+            n.title = x.name;
+            left.append(cb, n);
             const c = document.createElement('span');
             c.style.cssText = 'flex:0 0 auto;color:#e8d3ad';
-            c.textContent = '×' + count;
-            row.append(n, c);
-            return row;
-        };
-
-        list.appendChild(headRow('将存入（' + plan.groups + ' 个品类 / 共 ' + plan.total + ' 件）', '#ffd794'));
-        items.forEach(x => list.appendChild(itemRow(x.name, x.count, '')));
-        if (plan.skipped.length) {
-            list.appendChild(headRow('仓库没有同款而跳过（' + plan.skipped.length + ' 组）', '#d9a06b'));
-            plan.skipped.forEach(x => list.appendChild(itemRow(x.name, x.count, ' · 仓库无此品类')));
-        }
+            c.textContent = '×' + x.count;
+            row.append(left, c);
+            cb.addEventListener('change', () => {
+                if (cb.checked) selected.add(Number(x.item_id));
+                else selected.delete(Number(x.item_id));
+                refreshStat();
+            });
+            list.appendChild(row);
+        });
 
         const tip = document.createElement('div');
         tip.className = 'dnf-qty-msg';
-        tip.textContent = '仅存入与仓库 item_id 相同的材料与消耗品；同款会并入仓库已有堆叠，装备不参与。'
-            + (plan.skipped.length ? ' 被跳过的物品仍留在背包。' : '');
+        tip.textContent = '仅存入勾选的品类；同款会并入仓库已有堆叠，装备不参与。';
 
         const msg = document.createElement('div');
         msg.className = 'dnf-qty-msg';
@@ -3825,8 +3842,19 @@
         const ok = document.createElement('button');
         ok.type = 'button';
         ok.className = 'dnf-qty-ok';
-        ok.textContent = plan.skipped.length ? '存入 ' + plan.groups + ' 组' : '全部存入';
         actions.append(cancel, ok);
+
+        function chosenItems() {
+            return items.filter(x => selected.has(Number(x.item_id)));
+        }
+        function refreshStat() {
+            const chosen = chosenItems();
+            const total = chosen.reduce((sum, x) => sum + x.count, 0);
+            statLine.textContent = '将存入 ' + chosen.length + ' 组 / 共 ' + total + ' 件';
+            ok.disabled = !chosen.length;
+            ok.textContent = chosen.length ? '存入 ' + chosen.length + ' 组' : '请至少勾选 1 个品类';
+        }
+        refreshStat();
 
         cancel.addEventListener('click', closeQuickDepositConfirm);
         mask.addEventListener('click', (e) => { if (e.target === mask) closeQuickDepositConfirm(); });
@@ -3841,9 +3869,18 @@
             msg.textContent = '';
             msg.classList.remove('is-err', 'is-ok');
             try {
+                const chosen = chosenItems();
+                if (!chosen.length) {
+                    msg.textContent = '请至少勾选 1 个品类';
+                    msg.classList.add('is-err');
+                    ok.disabled = true;
+                    cancel.disabled = false;
+                    ok.textContent = '请至少勾选 1 个品类';
+                    return;
+                }
                 const data = await postCharacterApi(store, 'warehouse-deposit-batch', {
                     instance_ids: [],
-                    items: items.map(x => ({ item_id: Number(x.item_id), count: Number(x.count) }))
+                    items: chosen.map(x => ({ item_id: Number(x.item_id), count: Number(x.count) }))
                 }, 20000, '批量存入失败');
                 if (data && data.view && store.warehouse) store.warehouse.value = data.view;
                 const moved = Number(data && data.moved) || 0;
@@ -3863,13 +3900,13 @@
                 msg.classList.add('is-err');
                 ok.disabled = false;
                 cancel.disabled = false;
-                ok.textContent = '重试存入';
+                refreshStat();
             } finally {
                 _quickDepositBusy = false;
             }
         });
 
-        panel.append(title, sub, list, tip, msg, actions);
+        panel.append(title, sub, list, statLine, tip, msg, actions);
         mask.appendChild(panel);
         document.body.appendChild(mask);
     }
@@ -3925,6 +3962,85 @@
                 : (plan.skipped.length
                     ? '背包中的材料/消耗品仓库都没有同款，暂无可以一键存入的物品'
                     : '背包中没有可存入的材料或消耗品'));
+    }
+
+    /* ============================================================
+     * v6.04：背包装备页「按打造程度排序」
+     * ------------------------------------------------------------
+     * 不搬动游戏原生节点：只给 .bag-page-grid 的子项写 CSS order。
+     * 顺序来源 store.bagPagedItems（游戏当前页真实物品），
+     * 与原生稀有度整理、筛选、搜索、多选共存；默认顺序时清空 order。
+     * ============================================================ */
+    const EQUIP_SORT_MODES = { none: '默认顺序', enhance: '强化等级↓', amplify: '增幅等级↓', mix: '打造综合↓' };
+    let _equipSortMode = 'none';
+    let _equipSortSelect = null;
+
+    function equipCraftValue(it, mode) {
+        const enhance = Number(it && it.enhance_level) || 0;
+        const amplify = Number(it && it.amplify_level) || 0;
+        if (mode === 'enhance') return enhance;
+        if (mode === 'amplify') return amplify;
+        return enhance + amplify;   // 综合：强化等级 + 增幅等级
+    }
+
+    function clearEquipSortOrders(grid) {
+        for (const cell of grid.children) {
+            if (cell.style && cell.style.order) cell.style.order = '';
+        }
+    }
+
+    function applyEquipBagSort() {
+        const store = getGameStore();
+        const isEquip = !!(store && store.tab && store.tab.value === 'bag'
+            && store.bagSub && store.bagSub.value === 'equip');
+        if (_equipSortSelect && (!_equipSortSelect.isConnected || !isEquip)) {
+            _equipSortSelect.remove();
+            _equipSortSelect = null;
+        }
+        const grid = isEquip ? document.querySelector('.bag-page-grid') : null;
+        if (!isEquip || !grid) {
+            if (grid) clearEquipSortOrders(grid);
+            return;
+        }
+        const tab = document.querySelector('.bag-tab');
+        const toolbar = tab && Array.prototype.find.call(tab.children, c => c && c.classList && c.classList.contains('bag-toolbar'));
+        if (toolbar && !_equipSortSelect) {
+            const sel = document.createElement('select');
+            sel.className = 'sm';
+            sel.setAttribute('data-dnf-equip-sort', '1');
+            sel.title = '按装备打造程度排序（只改显示顺序，不动物品）';
+            sel.style.cssText = 'flex:0 0 auto;min-height:26px;padding:2px 6px;border-radius:6px;' +
+                'border:1px solid #9b7645;background:#2b2118;color:#ffd76b;' +
+                'font:12px/1.2 Microsoft YaHei,sans-serif;cursor:pointer';
+            Object.keys(EQUIP_SORT_MODES).forEach(mode => {
+                const opt = document.createElement('option');
+                opt.value = mode;
+                opt.textContent = EQUIP_SORT_MODES[mode];
+                sel.appendChild(opt);
+            });
+            sel.value = _equipSortMode;
+            sel.addEventListener('change', () => {
+                _equipSortMode = sel.value;
+                applyEquipBagSort();
+            });
+            const search = toolbar.querySelector('.bag-search');
+            if (search) toolbar.insertBefore(sel, search);
+            else toolbar.appendChild(sel);
+            _equipSortSelect = sel;
+        }
+        const paged = store.bagPagedItems ? store.bagPagedItems.value : null;
+        if (!Array.isArray(paged) || _equipSortMode === 'none' || paged.length < 2) {
+            clearEquipSortOrders(grid);
+            return;
+        }
+        const ranked = paged.map((it, index) => ({ index, value: equipCraftValue(it, _equipSortMode) }))
+            .sort((a, b) => (b.value - a.value) || (a.index - b.index));
+        const orderByIndex = new Map(ranked.map((x, rank) => [x.index, rank]));
+        const cells = Array.from(grid.children);
+        cells.forEach((cell, i) => {
+            const want = i < paged.length ? String(orderByIndex.get(i)) : String(100000 + i);
+            if (cell.style.order !== want) cell.style.order = want;
+        });
     }
 
     /* ============================================================
@@ -5187,6 +5303,7 @@
         applyNativeProfileCopyButton();
         applyWarehouseWithdrawBox();
         applyWarehouseQuickDeposit();
+        applyEquipBagSort();
         applyCraftProtectBuyButton();
         applyClearBoxAllButton();
     }
