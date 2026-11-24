@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      6.04
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存；v6.03 消耗品详情同样可存，数量自选）+ 仓库页「一键存仓」（按仓库已有品类以 item_id 匹配背包同款，面板逐品类勾选排除、底部实时显示将存入组数/件数，全部取消时置灰；一次批量提交）+ 背包装备页「按打造程度排序」（强化/增幅/综合降序，仅写 CSS order，与原生筛选、稀有度整理、多选共存，默认顺序完全还原）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 隐藏游戏原挂机助手光标/光球（入口在挂机浮窗「挂机页设置」区，沿用原隐藏与恢复逻辑）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情；v5.101 收纳史诗/传说 + Lv85 神器散件共 1,166 条，新增「神器/史诗/传说」品质筛选、武器按职业→类型三级分类、分批渲染，右上角「刷新」需二次确认；首次打开按需加载，ID 段枚举 + 逐件拉取带进度/可停止/失败重试，localStorage 缓存 7 天，内置最小基线兜底）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（174 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存；v5.101 补「回避率」映射、右上角刷新需二次确认）+ 打造页保护券「购买」入口（插件内面板直购商城材料里的强化/增幅保护券，金币支付、买不起置灰说明，不跳转游戏商城）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账；v6.03 未学习的技能先 skill-learn / 被动 tp-learn 再逐级升到目标）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
+// @version      6.06
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存；v6.03 消耗品详情同样可存，数量自选）+ 仓库页「一键存仓」（按仓库已有品类以 item_id 匹配背包同款，面板逐品类勾选排除、底部实时显示将存入组数/件数，全部取消时置灰；一次批量提交；v6.05 修复一键存仓品类名被勾选框挤成 0 宽不可见，名称按 item_id 解析并兜底「物品 #id」）+ 背包装备页「按打造程度排序」（强化/增幅/综合降序，仅写 CSS order，与原生筛选、稀有度整理、多选共存，默认顺序完全还原）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 游戏原挂机助手（光球/悬浮面板）默认隐藏 + 挂机浮窗「挂机页设置」提供「打开游戏挂机面板」替代入口（直接调用原生光球 click，不改原生结构）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情；v5.101 收纳史诗/传说 + Lv85 神器散件共 1,166 条，新增「神器/史诗/传说」品质筛选、武器按职业→类型三级分类、分批渲染，右上角「刷新」需二次确认；首次打开按需加载，ID 段枚举 + 逐件拉取带进度/可停止/失败重试，localStorage 缓存 7 天，内置最小基线兜底）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（174 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存；v5.101 补「回避率」映射、右上角刷新需二次确认）+ 打造页保护券「购买」入口（插件内面板直购商城材料里的强化/增幅保护券，金币支付、买不起置灰说明，不跳转游戏商城）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账；v6.03 未学习的技能先 skill-learn / 被动 tp-learn 再逐级升到目标）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -251,9 +251,6 @@
         moduleOrder: ['char', 'status', 'dungeon', 'settle', 'log', 'tabs'],
         // 特性技能按前置主动/被动是否已学过滤（主动/被动面板始终全部显示）
         hideUnlearnedSkills: true,
-        // 屏蔽游戏自带的「挂机助手」悬浮窗/页面（含折叠后的圆球）；默认开启，
-        // 关闭则恢复显示。仅用 CSS 隐藏，不影响游戏逻辑与收益。
-        hideGameAssistant: true,
         // 统一游戏 UI 风格：深底 + 金边 + 圆角（与背包标签行一致）
         uiTheme: true,
         // v5.81：启动后自动联网检查更新（只提示，不下载执行脚本）。默认开启。
@@ -264,7 +261,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '6.04';
+    const VERSION = '6.06';
 
     /**
      * 游戏接口 GET 统一超时（v5.90）
@@ -286,7 +283,7 @@
     /**
      * 可持久化的用户设置白名单（只存这些，其它运行期配置不写盘）。
      */
-    const SETTING_KEYS = ['relocateTabsAfterSettlement', 'hudCorner', 'hudPos', 'hudDock', 'uiTheme', 'debugHud', 'moduleOrder', 'hideUnlearnedSkills', 'hideGameAssistant', 'hudCollapsed', 'autoCheckUpdate'];
+    const SETTING_KEYS = ['relocateTabsAfterSettlement', 'hudCorner', 'hudPos', 'hudDock', 'uiTheme', 'debugHud', 'moduleOrder', 'hideUnlearnedSkills', 'hudCollapsed', 'autoCheckUpdate'];
 
     /** 可自定义上下顺序的六大模块（v5.95：按栏分组；v5.98：功能框并入中栏） */
     const MODULE_DEFS = [
@@ -412,6 +409,9 @@
      */
     function softReloadScriptRuntime() {
         log('[软重置] 清除所有运行时状态（视作页面刷新）');
+
+        // 角色切换后，原生挂机助手恢复到默认隐藏；不放行上一次打开的面板
+        try { document.documentElement.classList.remove('dnf-show-native-assist'); } catch (_) {}
 
         // --- Store 缓存 ---
         _cachedGameStore = null;
@@ -801,13 +801,43 @@
         });
     }
 
-    /** 显示 / 隐藏游戏自带的「挂机助手」悬浮窗（含折叠球） */
+    /** 游戏自带的「挂机助手」光标/悬浮面板默认隐藏（仅 CSS，不改原生 DOM 结构） */
+    let gameAssistRevealAt = 0;
     function applyGameAssistantVisibility() {
         const root = document.documentElement;
-        const want = !!CONFIG.hideGameAssistant;
-        if (root && root.classList.contains('dnf-hide-game-assist') !== want) {
-            root.classList.toggle('dnf-hide-game-assist', want);
+        if (!root) return;
+        if (!root.classList.contains('dnf-hide-game-assist')) {
+            root.classList.add('dnf-hide-game-assist');
         }
+        // 原生面板已收起或组件被卸载后撤销放行，保证重新挂载时仍默认隐藏
+        if (root.classList.contains('dnf-show-native-assist') &&
+            !document.querySelector('.assist.panel') &&
+            Date.now() - gameAssistRevealAt > 1500) {
+            root.classList.remove('dnf-show-native-assist');
+        }
+    }
+
+    /**
+     * 插件内的替代入口：效果等同点击原生挂机助手光球。
+     * 原生光球（.assist-dot）的 onClick 会把 dnf_assistant_hide_<charId> 置 0 并展开面板；
+     * 这里优先直接调用原生节点的 click()，复用同一套逻辑，不另写开面板代码。
+     * 若面板已处于展开态（原生默认状态、尚未收成光球），最终状态本就与点击光球一致，只需放行显示。
+     */
+    function openGameAssistantPanel() {
+        const root = document.documentElement;
+        if (!root) return false;
+        gameAssistRevealAt = Date.now();
+        const dot = document.querySelector('.assist-dot');
+        if (dot) {
+            root.classList.add('dnf-show-native-assist');
+            dot.click();   // 原生节点的点击处理：hide=0 + 展开面板
+            return true;
+        }
+        if (document.querySelector('.assist.panel')) {
+            root.classList.add('dnf-show-native-assist');
+            return true;
+        }
+        return false;
     }
 
     // 安装 fetch 拦截器（必须在游戏加载前生效，脚本 @run-at document-start）
@@ -1681,11 +1711,19 @@
         if (CONFIG.debugHud && bloodBarStatusText) {
             lines.push('血条同步: <span style="color:#8ecaff">' + escHtml(bloodBarStatusText) + '</span>');
         }
-        // 挂机页自己的设置区（v6.04：原挂机助手光球开关从主设置面板迁到这里）
+        // 挂机页自己的设置区（v6.04 起独立；v6.06 光球改为默认隐藏 + 插件替代入口）
         lines.push('<div style="border-top:1px dashed rgba(255,184,77,0.25);margin:6px 0 4px"></div>');
         lines.push('<div style="font-size:11px;color:#a79070;margin-bottom:2px">挂机页设置</div>');
-        lines.push(renderSettingsRow('隐藏游戏原挂机助手光标（光球）', 'hideGameAssistant',
-            '勾选后隐藏原生挂机助手的光球/悬浮窗，取消恢复'));
+        lines.push('<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin:3px 0">' +
+            '<div style="flex:1;min-width:0">' +
+                '<div style="font-size:12px;color:#ffd76b">打开游戏挂机面板</div>' +
+                '<div style="font-size:10px;color:#a79070">等同点击游戏原挂机助手光球</div>' +
+            '</div>' +
+            '<button type="button" data-open-game-assist="1" style="flex:0 0 auto;min-width:52px;min-height:28px;' +
+                'padding:0 10px;border-radius:6px;border:1px solid rgba(255,184,77,0.5);' +
+                'background:rgba(255,184,77,0.14);color:#ffd76b;font:12px/1 Microsoft YaHei,sans-serif;' +
+                'cursor:pointer">打开</button>' +
+            '</div>');
 
         const html = lines.join('<br>');
         if (html === hudLastHtml) return;   // 内容没变：不重建 DOM，保住滚动位置与点击态
@@ -1796,10 +1834,6 @@
                     if (CONFIG[k]) relocateTabsAfterSettlement();
                     else resetTabsPlacement();
                 }
-                if (k === 'hideGameAssistant') {
-                    // 立即生效：给 <html> 加/去类，CSS 同时隐藏展开面板与折叠球
-                    applyGameAssistantVisibility();
-                }
                 if (k === 'uiTheme') {
                     // 立即生效：整块移除 / 重新注入主题样式
                     applyUiTheme();
@@ -1807,6 +1841,15 @@
                 renderHud();
                 renderSettingsPanel();
                 showTip((CONFIG[k] ? '已开启' : '已关闭') + ': ' + k);
+            });
+        });
+
+        // 挂机页设置：「打开游戏挂机面板」替代入口（等同点击原生光球）
+        root.querySelectorAll('[data-open-game-assist]').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const ok = openGameAssistantPanel();
+                showTip(ok ? '已打开游戏挂机助手' : '游戏挂机助手未就绪，请稍后再试');
             });
         });
 
@@ -2810,9 +2853,12 @@
             '.dnf-epic-close{margin-top:12px;width:100%;padding:8px;border:none;border-radius:8px;' +
                 'cursor:pointer;font-family:inherit;font-size:13px;font-weight:800;color:#3a2500;' +
                 'background:linear-gradient(90deg,#ffd84a,#ff9d00);box-shadow:0 0 12px #ffb84a}',
-            // ===== 隐藏游戏自带的「挂机助手」悬浮窗（展开面板 + 折叠球）=====
+            // ===== 隐藏游戏自带的「挂机助手」光标（光球）与悬浮面板 =====
+            // 默认全部隐藏；插件按钮点击原生光球后，再放行原生面板显示。
             '.dnf-hide-game-assist .assist,' +
-            '.dnf-hide-game-assist .assist-collapsed{display:none !important}',
+            '.dnf-hide-game-assist .assist-collapsed,' +
+            '.dnf-hide-game-assist .assist-dot{display:none !important}',
+            '.dnf-show-native-assist .assist.panel{display:block !important}',
             // ===== 移动端六大模块自定义排序 =====
             '@media (max-width:760px){' +
                 '.main.dnf-mod-stack{grid-template-columns:1fr !important;' +
@@ -3720,8 +3766,9 @@
         return ids;
     }
 
+    /** 背包条目的原始名称（可能为空）；空名称由面板按 item_id 解析并兜底 */
     function trimmedItemName(item) {
-        return String((item && item.name) || '未命名道具').trim();
+        return item && item.name != null ? String(item.name).trim() : '';
     }
 
     /**
@@ -3803,16 +3850,28 @@
             row.style.cssText = 'display:flex;align-items:center;gap:8px;justify-content:space-between;' +
                 'padding:2px 0;cursor:pointer';
             const left = document.createElement('span');
-            left.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0';
+            left.style.cssText = 'display:flex;align-items:center;gap:6px;min-width:0;flex:1 1 auto';
             const cb = document.createElement('input');
             cb.type = 'checkbox';
             cb.checked = true;
             cb.setAttribute('data-dnf-quick-deposit-item', String(x.item_id));
-            cb.style.cssText = 'flex:0 0 auto;margin:0;accent-color:#c08b4a';
+            // 游戏全局样式给裸 input 设了 width:100%，不显式限宽会把整行占满、把名称挤成 0 宽
+            cb.style.cssText = 'flex:0 0 auto;width:14px;height:14px;margin:0;accent-color:#c08b4a';
             const n = document.createElement('span');
-            n.style.cssText = 'min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
-            n.textContent = x.name;
-            n.title = x.name;
+            n.style.cssText = 'min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+            const rawName = x.name != null ? String(x.name).trim() : '';
+            n.textContent = rawName || ('物品 #' + x.item_id);
+            n.title = n.textContent;
+            // 背包条目可能不带 name（或只有空白）：按 item_id 走既有物品名缓存/接口解析
+            if (!rawName) {
+                resolveItemName(Number(x.item_id)).then(name => {
+                    const text = String(name || '').trim();
+                    // resolveItemName 失败时会返回「物品 3129」，这里统一成「物品 #3129」
+                    const finalText = text && !/^物品\s*\d+$/.test(text) ? text : ('物品 #' + x.item_id);
+                    if (n.isConnected) { n.textContent = finalText; n.title = finalText; }
+                    x.name = finalText;
+                }).catch(() => { });
+            }
             left.append(cb, n);
             const c = document.createElement('span');
             c.style.cssText = 'flex:0 0 auto;color:#e8d3ad';
