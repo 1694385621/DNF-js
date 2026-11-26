@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      6.06
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存；v6.03 消耗品详情同样可存，数量自选）+ 仓库页「一键存仓」（按仓库已有品类以 item_id 匹配背包同款，面板逐品类勾选排除、底部实时显示将存入组数/件数，全部取消时置灰；一次批量提交；v6.05 修复一键存仓品类名被勾选框挤成 0 宽不可见，名称按 item_id 解析并兜底「物品 #id」）+ 背包装备页「按打造程度排序」（强化/增幅/综合降序，仅写 CSS order，与原生筛选、稀有度整理、多选共存，默认顺序完全还原）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 游戏原挂机助手（光球/悬浮面板）默认隐藏 + 挂机浮窗「挂机页设置」提供「打开游戏挂机面板」替代入口（直接调用原生光球 click，不改原生结构）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情；v5.101 收纳史诗/传说 + Lv85 神器散件共 1,166 条，新增「神器/史诗/传说」品质筛选、武器按职业→类型三级分类、分批渲染，右上角「刷新」需二次确认；首次打开按需加载，ID 段枚举 + 逐件拉取带进度/可停止/失败重试，localStorage 缓存 7 天，内置最小基线兜底）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（174 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存；v5.101 补「回避率」映射、右上角刷新需二次确认）+ 打造页保护券「购买」入口（插件内面板直购商城材料里的强化/增幅保护券，金币支付、买不起置灰说明，不跳转游戏商城）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账；v6.03 未学习的技能先 skill-learn / 被动 tp-learn 再逐级升到目标）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
+// @version      6.07
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存；v6.03 消耗品详情同样可存，数量自选）+ 仓库页「一键存仓」（按仓库已有品类以 item_id 匹配背包同款，面板逐品类勾选排除、底部实时显示将存入组数/件数，全部取消时置灰；一次批量提交；v6.05 修复一键存仓品类名被勾选框挤成 0 宽不可见，名称按 item_id 解析并兜底「物品 #id」）+ 背包装备页「按打造程度排序」（强化/增幅/综合降序；v6.07 改为全局重排 inventory 装备行，分页也按全局顺序，切默认/离开装备页自动还原，与原生筛选、多选共存并提示稀有度整理冲突）+ 装备拥有数量角标（红=背包、蓝=仓库，同名不同强化合并，无则灰 0，设置可关）+ 背包装备详情「存仓」「分解」（v6.07 去掉类型/白名单预判，按钮始终可点，失败用服务端文案提示；分解仅保留锁定保护；已有「上架拍卖」入口的材料/消耗品只保留上架，不注入这一组）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 游戏原挂机助手（光球/悬浮面板）默认隐藏 + 挂机浮窗「挂机页设置」提供「打开游戏挂机面板」替代入口（直接调用原生光球 click，不改原生结构）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情；v5.101 收纳史诗/传说 + Lv85 神器散件共 1,166 条，新增「神器/史诗/传说」品质筛选、武器按职业→类型三级分类、分批渲染，右上角「刷新」需二次确认；首次打开按需加载，ID 段枚举 + 逐件拉取带进度/可停止/失败重试，localStorage 缓存 7 天，内置最小基线兜底）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（174 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存；v5.101 补「回避率」映射、右上角刷新需二次确认）+ 打造页保护券「购买」入口（插件内面板直购商城材料里的强化/增幅保护券，金币支付、买不起置灰说明，不跳转游戏商城）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账；v6.03 未学习的技能先 skill-learn / 被动 tp-learn 再逐级升到目标）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -194,7 +194,7 @@
     function renderSettingsPanel() {
         if(!settingsPanelEl?.isConnected)return;
         const body=settingsPanelEl.querySelector('.dnf-settings-body');
-        const options=[['功能栏下移','relocateTabsAfterSettlement','功能栏放到最近结算下方'],['特性技能过滤','hideUnlearnedSkills','只显示已学前置的特性'],['统一 UI 主题','uiTheme','深色底、金色边框'],['诊断信息','debugHud','显示血条同步状态'],['启动时自动检查更新','autoCheckUpdate','读 version.json，只提示不自动安装']];
+        const options=[['功能栏下移','relocateTabsAfterSettlement','功能栏放到最近结算下方'],['特性技能过滤','hideUnlearnedSkills','只显示已学前置的特性'],['装备拥有数量','showOwnedCounts','装备角标：红=背包，蓝=仓库'],['统一 UI 主题','uiTheme','深色底、金色边框'],['诊断信息','debugHud','显示血条同步状态'],['启动时自动检查更新','autoCheckUpdate','读 version.json，只提示不自动安装']];
         body.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:8px">'+options.map(args=>'<div style="padding:8px 10px;border:1px solid #56422f;border-radius:8px;background:#2b2118">'+renderSettingsRow(...args)+'</div>').join('')+'</div>'+(moduleLayoutMode()!=='desktop'?'<div style="margin-top:12px">'+renderModuleOrderRows()+'</div>':'')+renderUpdateBlock();
         body.querySelectorAll('[data-setkey]').forEach(el=>{el.setAttribute('role','switch');el.tabIndex=0;el.setAttribute('aria-checked',String(CONFIG[el.dataset.setkey]));el.setAttribute('aria-label',options.find(o=>o[1]===el.dataset.setkey)[0]);el.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();el.click();}});});
         bindSettingsToggles(body);
@@ -251,6 +251,8 @@
         moduleOrder: ['char', 'status', 'dungeon', 'settle', 'log', 'tabs'],
         // 特性技能按前置主动/被动是否已学过滤（主动/被动面板始终全部显示）
         hideUnlearnedSkills: true,
+        // v6.07：背包/仓库装备角标显示拥有数量（红=背包件数，蓝=仓库件数）
+        showOwnedCounts: true,
         // 统一游戏 UI 风格：深底 + 金边 + 圆角（与背包标签行一致）
         uiTheme: true,
         // v5.81：启动后自动联网检查更新（只提示，不下载执行脚本）。默认开启。
@@ -261,7 +263,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '6.06';
+    const VERSION = '6.07';
 
     /**
      * 游戏接口 GET 统一超时（v5.90）
@@ -283,7 +285,7 @@
     /**
      * 可持久化的用户设置白名单（只存这些，其它运行期配置不写盘）。
      */
-    const SETTING_KEYS = ['relocateTabsAfterSettlement', 'hudCorner', 'hudPos', 'hudDock', 'uiTheme', 'debugHud', 'moduleOrder', 'hideUnlearnedSkills', 'hudCollapsed', 'autoCheckUpdate'];
+    const SETTING_KEYS = ['relocateTabsAfterSettlement', 'hudCorner', 'hudPos', 'hudDock', 'uiTheme', 'debugHud', 'moduleOrder', 'hideUnlearnedSkills', 'showOwnedCounts', 'hudCollapsed', 'autoCheckUpdate'];
 
     /** 可自定义上下顺序的六大模块（v5.95：按栏分组；v5.98：功能框并入中栏） */
     const MODULE_DEFS = [
@@ -2859,6 +2861,17 @@
             '.dnf-hide-game-assist .assist-collapsed,' +
             '.dnf-hide-game-assist .assist-dot{display:none !important}',
             '.dnf-show-native-assist .assist.panel{display:block !important}',
+            // ===== v6.07：装备拥有数量角标（红=背包件数，蓝=仓库件数，0 显示灰色）=====
+            // 只在背包/仓库装备格子上挂 data-dnf-own-* 属性，不动物品节点结构。
+            '.bag-slot[data-dnf-own-bag]::after,.bag-slot[data-dnf-own-wh]::before{' +
+                'position:absolute;right:1px;z-index:6;min-width:13px;height:13px;padding:0 2px;' +
+                'box-sizing:border-box;border-radius:7px;color:#fff;' +
+                'font:700 10px/13px "Microsoft YaHei",system-ui,sans-serif;text-align:center;' +
+                'pointer-events:none;text-shadow:0 1px 2px #000;box-shadow:0 1px 3px #000a}',
+            '.bag-slot[data-dnf-own-bag]::after{content:attr(data-dnf-own-bag);top:16px;background:#e11d2e}',
+            '.bag-slot[data-dnf-own-wh]::before{content:attr(data-dnf-own-wh);top:31px;background:#2563eb}',
+            '.bag-slot[data-dnf-own-bag="0"]::after,' +
+            '.bag-slot[data-dnf-own-wh="0"]::before{background:#4b5563;color:#cbd5e1;opacity:.6;box-shadow:none}',
             // ===== 移动端六大模块自定义排序 =====
             '@media (max-width:760px){' +
                 '.main.dnf-mod-stack{grid-template-columns:1fr !important;' +
@@ -3486,33 +3499,8 @@
         return Math.max(0, Number(item && item.count) || 0);
     }
 
-    function depositDisabledReason(store, item) {
-        if (!item) return '没有可存入的物品';
-        const slot = store.detailEquippedSlot ? store.detailEquippedSlot.value : '';
-        if (slot) return '已穿戴，请先卸下再存入';
-        // v5.73：去掉「物品已锁定」禁用条件，锁定装备同样允许存仓。
-        // 注意：detailInInventory 是「背包中对应物品对象」的 ref，而不是布尔值
-        const inBag = store.detailInInventory ? store.detailInInventory.value : null;
-        if (!inBag) return '物品不在背包中，无法存入';
-        const wh = store.warehouse ? store.warehouse.value : null;
-        if (wh && Number(wh.used) >= Number(wh.capacity)) {
-            return '仓库已满（' + wh.used + '/' + wh.capacity + '）';
-        }
-        if (item.kind === 'equipment') {
-            if (!(Number(item.instance_id) > 0)) return '该装备没有实例编号，无法存入';
-            return '';
-        }
-        if (!(detailStackCount(store, item) > 0)) return '该物品数量不足，无法存入';
-        if (DEPOSIT_EXCLUDED_IDS.has(Number(item.item_id))) return '该物品不可存入仓库（特殊道具）';
-        // v6.03：消耗品/药剂不在游戏内部「可存材料」白名单里，但仓库接口支持存入；
-        // 只在详情页放开，绑定/不可存的道具仍由服务端返回错误。
-        if (item.kind === 'consumable' || item.kind === 'potion') return '';
-        if (item.kind === 'clearbox' || item.kind === 'avatar') return '该物品不可存入仓库（特殊道具）';
-        // 游戏内部 warehouseDepositItems 就是「可存入材料」白名单（排除消耗品与特殊/绑定道具）
-        const list = store.warehouseDepositItems ? store.warehouseDepositItems.value : null;
-        if (Array.isArray(list) && !list.some(x => x && x.item_id === item.item_id)) {
-            return '该物品不可存入仓库（绑定/特殊道具）';
-        }
+    /** v6.07：详情不再按类型/白名单预判，一律放行；失败由服务端 error 文案提示 */
+    function depositDisabledReason() {
         return '';
     }
 
@@ -3571,8 +3559,7 @@
         const item = store.detailItem.value;
         if (!item) return;
 
-        const reason = depositDisabledReason(store, item);
-        if (reason) { setDepositMsg(box, reason, true); return; }
+        // v6.07：不再做前置拦截，直接提交；失败由服务端 error 文案提示
 
         const isEquip = item.kind === 'equipment';
         let qty = 1;
@@ -3659,12 +3646,8 @@
 
         if (!mask || !actions || !item) return;
         if (!store.tab || store.tab.value !== 'bag') return;
+        // v6.07：删掉子页/物品类型拦截，背包内所有单件详情都注入
         const sub = store.bagSub ? store.bagSub.value : '';
-        // v6.03：消耗品（potion）详情也注入存仓按钮
-        if (sub !== 'equip' && sub !== 'material' && sub !== 'consume') return;
-        if (sub === 'equip' && item.kind !== 'equipment') return;
-        if (sub !== 'equip' && item.kind === 'equipment') return;
-        if (sub === 'material' && (item.kind === 'consumable' || item.kind === 'potion')) return;
 
         const stackCount = detailStackCount(store, item);
         const reason = depositDisabledReason(store, item);
@@ -3675,33 +3658,24 @@
         if (existing && existing.dataset.depositKey === key) return;
         if (existing) existing.remove();
 
+        // v6.07：材料/消耗品等详情已有「上架拍卖」入口，不再注入存仓/分解这一组；
+        // 装备详情没有上架入口，注入存仓 + 分解（锁定装备保留分解保护）。
+        const hasAuctionEntry = item.kind !== 'equipment';
+
         const box = document.createElement('div');
         box.className = 'dnf-deposit-box';
         box.setAttribute('data-dnf-deposit-box', '1');
         box.dataset.depositKey = key;
         _depositBoxEl = box;
 
-        // 材料可堆叠时给数量输入：默认整组，可改，上限=持有数
-        if (item.kind !== 'equipment' && stackCount > 1) {
-            const label = document.createElement('span');
-            label.className = 'dnf-deposit-label';
-            label.textContent = '数量';
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.className = 'dnf-deposit-qty';
-            input.min = '1';
-            input.max = String(stackCount);
-            input.step = '1';
-            input.value = String(stackCount);
-            input.title = '存入数量（最多 ' + stackCount + ' 个）';
-            input.setAttribute('aria-label', '存入数量');
-            input.addEventListener('input', () => {
-                const max = Math.max(1, stackCount);
-                let n = parseInt(input.value, 10);
-                if (!Number.isFinite(n) || n < 1) return; // 允许暂时清空输入
-                if (n > max) { n = max; input.value = String(n); }
-            });
-            box.append(label, input);
+        const msg = document.createElement('div');
+        msg.className = 'dnf-deposit-msg';
+
+        if (hasAuctionEntry) {
+            box.append(createAuctionButton(store, box, item));
+            box.append(msg);
+            actions.appendChild(box);
+            return;
         }
 
         const btn = document.createElement('button');
@@ -3709,15 +3683,7 @@
         btn.className = 'da-btn dnf-deposit-btn';
         btn.textContent = '存仓';
         btn.title = '存入共享仓库';
-
-        const msg = document.createElement('div');
-        msg.className = 'dnf-deposit-msg';
-        if (reason) {
-            btn.disabled = true;
-            btn.title = '无法存入：' + reason;
-            msg.textContent = reason;
-            msg.classList.add('is-err');
-        }
+        // v6.07：不再按类型/白名单预判，按钮始终可点，失败由服务端文案提示
 
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -3725,14 +3691,8 @@
             depositDetailItem(store, box);
         });
         box.append(btn);
-        // v5.98：材料/消耗品详情在「存仓」右侧加上架拍卖（装备不显示，装备请在拍卖行内上架）
-        if (item.kind !== 'equipment') {
-            box.append(createAuctionButton(store, box, item));
-        }
-        // v5.91：背包装备详情在「存仓」右侧加「分解」（与存仓同一行）
-        if (sub === 'equip' && item.kind === 'equipment') {
-            box.append(createDecomposeButton(store, box, item));
-        }
+        // v6.07：装备详情始终显示分解；锁定装备保留置灰保护
+        box.append(createDecomposeButton(store, box, item));
         box.append(msg);
         actions.appendChild(box);
     }
@@ -4024,15 +3984,22 @@
     }
 
     /* ============================================================
-     * v6.04：背包装备页「按打造程度排序」
+     * 背包装备页「按打造程度排序」
+     * v6.07：改为全局重排（原 CSS order 只能排当前页，跨页无效）
      * ------------------------------------------------------------
-     * 不搬动游戏原生节点：只给 .bag-page-grid 的子项写 CSS order。
-     * 顺序来源 store.bagPagedItems（游戏当前页真实物品），
-     * 与原生稀有度整理、筛选、搜索、多选共存；默认顺序时清空 order。
+     * 游戏分页先按 bagViewItems 切片再渲染，所以这里直接重排
+     * store.inventory 里的装备对象（只交换装备行，材料/消耗品位置不动），
+     * 使 bagEquip → bagViewItems → bagPagedItems 全局有序，第 1 页即最强。
+     *   - 保留原始装备顺序快照，切默认/离开装备页/切角色时还原；
+     *   - 每次扫描按 instance_id 序列比对，不一致才写，幂等；
+     *   - 原生「稀有度整理」会在视图层再排序，开启时界面上给出提示。
      * ============================================================ */
     const EQUIP_SORT_MODES = { none: '默认顺序', enhance: '强化等级↓', amplify: '增幅等级↓', mix: '打造综合↓' };
     let _equipSortMode = 'none';
     let _equipSortSelect = null;
+    let _equipSortWarn = null;
+    let _equipSortOriginal = null;   // { charId, ids: [] } 原始装备 instance_id 顺序
+    let _equipSortCharId = null;
 
     function equipCraftValue(it, mode) {
         const enhance = Number(it && it.enhance_level) || 0;
@@ -4048,6 +4015,82 @@
         }
     }
 
+    /** 背包数组里可重排的装备下标（kind=equipment 且有实例编号） */
+    function equipInventoryIndexes(inv) {
+        const idx = [];
+        if (!Array.isArray(inv)) return idx;
+        for (let i = 0; i < inv.length; i++) {
+            const x = inv[i];
+            if (x && x.kind === 'equipment' && Number(x.instance_id) > 0) idx.push(i);
+        }
+        return idx;
+    }
+
+    /** 还原原始装备顺序；快照里已不存在的装备丢弃，新装备按当前顺序补到末尾 */
+    function restoreEquipInventory(store) {
+        const inv = store && store.inventory ? store.inventory.value : null;
+        if (!Array.isArray(inv)) { _equipSortOriginal = null; return; }
+        const idx = equipInventoryIndexes(inv);
+        if (_equipSortOriginal && _equipSortOriginal.ids.length && idx.length) {
+            const byId = new Map();
+            for (const i of idx) byId.set(Number(inv[i].instance_id), inv[i]);
+            const ordered = [];
+            const used = new Set();
+            for (const id of _equipSortOriginal.ids) {
+                const x = byId.get(Number(id));
+                if (x && !used.has(Number(id))) { ordered.push(x); used.add(Number(id)); }
+            }
+            for (const i of idx) {
+                const x = inv[i];
+                const id = Number(x.instance_id);
+                if (!used.has(id)) { ordered.push(x); used.add(id); }
+            }
+            idx.forEach((slot, k) => {
+                if (ordered[k] && inv[slot] !== ordered[k]) inv[slot] = ordered[k];
+            });
+        }
+        _equipSortOriginal = null;
+    }
+
+    /** 按当前打造模式重排 inventory 里的装备对象（幂等：顺序一致就不写） */
+    function applyEquipGlobalSort(store) {
+        const inv = store && store.inventory ? store.inventory.value : null;
+        if (!Array.isArray(inv)) return;
+        const charId = store.charId ? store.charId.value : null;
+        if (_equipSortCharId !== charId) {
+            _equipSortCharId = charId;
+            _equipSortOriginal = null;
+        }
+        if (_equipSortMode === 'none') {
+            if (_equipSortOriginal) restoreEquipInventory(store);
+            return;
+        }
+        const idx = equipInventoryIndexes(inv);
+        if (idx.length < 2) return;
+        if (!_equipSortOriginal) {
+            _equipSortOriginal = { charId: charId, ids: idx.map(i => Number(inv[i].instance_id)) };
+        }
+        const rank = new Map();
+        _equipSortOriginal.ids.forEach((id, i) => rank.set(Number(id), i));
+        const rows = idx.map((slot, pos) => {
+            const it = inv[slot];
+            const id = Number(it.instance_id);
+            return { slot: slot, it: it, id: id, rank: rank.has(id) ? rank.get(id) : 1e9 + pos };
+        });
+        rows.sort((a, b) => {
+            const dv = equipCraftValue(b.it, _equipSortMode) - equipCraftValue(a.it, _equipSortMode);
+            if (dv) return dv;
+            if (a.rank !== b.rank) return a.rank - b.rank;
+            return a.id - b.id;
+        });
+        let same = true;
+        for (let k = 0; k < rows.length; k++) {
+            if (inv[idx[k]] !== rows[k].it) { same = false; break; }
+        }
+        if (same) return;
+        idx.forEach((slot, k) => { inv[slot] = rows[k].it; });
+    }
+
     function applyEquipBagSort() {
         const store = getGameStore();
         const isEquip = !!(store && store.tab && store.tab.value === 'bag'
@@ -4056,18 +4099,24 @@
             _equipSortSelect.remove();
             _equipSortSelect = null;
         }
-        const grid = isEquip ? document.querySelector('.bag-page-grid') : null;
-        if (!isEquip || !grid) {
-            if (grid) clearEquipSortOrders(grid);
+        if (_equipSortWarn && (!_equipSortWarn.isConnected || !isEquip)) {
+            _equipSortWarn.remove();
+            _equipSortWarn = null;
+        }
+        if (!isEquip) {
+            // 离开装备页：恢复原始装备顺序
+            if (store && _equipSortOriginal) restoreEquipInventory(store);
             return;
         }
+        const grid = document.querySelector('.bag-page-grid');
+        if (grid) clearEquipSortOrders(grid);   // 兜底：清掉旧版本可能残留的 CSS order
         const tab = document.querySelector('.bag-tab');
         const toolbar = tab && Array.prototype.find.call(tab.children, c => c && c.classList && c.classList.contains('bag-toolbar'));
         if (toolbar && !_equipSortSelect) {
             const sel = document.createElement('select');
             sel.className = 'sm';
             sel.setAttribute('data-dnf-equip-sort', '1');
-            sel.title = '按装备打造程度排序（只改显示顺序，不动物品）';
+            sel.title = '按打造程度全局重排背包装备（跨页生效，只改顺序，不改变物品）';
             sel.style.cssText = 'flex:0 0 auto;min-height:26px;padding:2px 6px;border-radius:6px;' +
                 'border:1px solid #9b7645;background:#2b2118;color:#ffd76b;' +
                 'font:12px/1.2 Microsoft YaHei,sans-serif;cursor:pointer';
@@ -4080,26 +4129,115 @@
             sel.value = _equipSortMode;
             sel.addEventListener('change', () => {
                 _equipSortMode = sel.value;
+                // 切换排序后回到第 1 页，直接看到全局最强的一批
+                if (store.bagPage) store.bagPage.value = 1;
+                // 原生「稀有度整理」会覆盖打造排序：用户主动选排序时帮他关掉并说明
+                if (_equipSortMode !== 'none' && store.bagSortRarity && store.bagSortRarity.value) {
+                    store.bagSortRarity.value = false;
+                    showTip('已关闭游戏「稀有度整理」，避免覆盖打造排序');
+                }
                 applyEquipBagSort();
             });
             const search = toolbar.querySelector('.bag-search');
             if (search) toolbar.insertBefore(sel, search);
             else toolbar.appendChild(sel);
             _equipSortSelect = sel;
+            const warn = document.createElement('span');
+            warn.setAttribute('data-dnf-equip-sort-warn', '1');
+            warn.textContent = '稀有度整理会覆盖此排序';
+            warn.title = '游戏自带的「稀有度整理」开启时，视图会按品质重排；关闭后打造排序才会生效';
+            warn.style.cssText = 'flex:0 0 auto;display:none;font:11px/1.2 Microsoft YaHei,sans-serif;' +
+                'color:#ff9a9a;white-space:nowrap';
+            sel.insertAdjacentElement('afterend', warn);
+            _equipSortWarn = warn;
         }
-        const paged = store.bagPagedItems ? store.bagPagedItems.value : null;
-        if (!Array.isArray(paged) || _equipSortMode === 'none' || paged.length < 2) {
-            clearEquipSortOrders(grid);
-            return;
+        if (_equipSortWarn) {
+            const conflict = !!(store && store.bagSortRarity && store.bagSortRarity.value);
+            _equipSortWarn.style.display = conflict && _equipSortMode !== 'none' ? 'inline-block' : 'none';
         }
-        const ranked = paged.map((it, index) => ({ index, value: equipCraftValue(it, _equipSortMode) }))
-            .sort((a, b) => (b.value - a.value) || (a.index - b.index));
-        const orderByIndex = new Map(ranked.map((x, rank) => [x.index, rank]));
-        const cells = Array.from(grid.children);
-        cells.forEach((cell, i) => {
-            const want = i < paged.length ? String(orderByIndex.get(i)) : String(100000 + i);
-            if (cell.style.order !== want) cell.style.order = want;
+        applyEquipGlobalSort(store);
+    }
+
+    /* ============================================================
+     * v6.07：背包装备 / 仓库装备「拥有数量」角标
+     * ------------------------------------------------------------
+     * 数据全部取自 store（bagEquip + warehouse.equipment），不新增
+     * fetch 钩子、不自己取 token 拉接口；按名称聚合同名不同强化。
+     * 红圈=背包件数，蓝圈=仓库件数，没有的一侧显示灰色 0。
+     * 只在格子上挂插件专属 data 属性，由 CSS 伪元素绘制，pointer-events:none。
+     * ============================================================ */
+    const OWNED_BAG_ATTR = 'data-dnf-own-bag';
+    const OWNED_WH_ATTR = 'data-dnf-own-wh';
+
+    function ownedNameKey(name) {
+        return String(name == null ? '' : name).trim();
+    }
+
+    /** 背包/仓库装备按名称聚合件数（同名不同强化视为同一款） */
+    function ownedCountMaps(store) {
+        const bag = new Map();
+        const wh = new Map();
+        const add = (map, list) => {
+            if (!Array.isArray(list)) return;
+            for (const x of list) {
+                if (!x) continue;
+                const key = ownedNameKey(x.name);
+                if (!key) continue;
+                const c = Number(x.count);
+                map.set(key, (map.get(key) || 0) + (c > 0 ? c : 1));
+            }
+        };
+        add(bag, store.bagEquip ? store.bagEquip.value : null);
+        const w = store.warehouse ? store.warehouse.value : null;
+        add(wh, w && w.equipment);
+        return { bag: bag, wh: wh };
+    }
+
+    function clearOwnedBadges(keep) {
+        document.querySelectorAll('.bag-slot[data-dnf-own-bag],.bag-slot[data-dnf-own-wh]').forEach(cell => {
+            if (keep && keep.has(cell)) return;
+            cell.removeAttribute(OWNED_BAG_ATTR);
+            cell.removeAttribute(OWNED_WH_ATTR);
         });
+    }
+
+    function applyOwnedCountBadges() {
+        if (!CONFIG.showOwnedCounts) { clearOwnedBadges(null); return; }
+        const store = getGameStore();
+        if (!store || !store.tab || store.tab.value !== 'bag') { clearOwnedBadges(null); return; }
+        const sub = store.bagSub ? store.bagSub.value : '';
+        if (sub !== 'equip' && sub !== 'warehouse') { clearOwnedBadges(null); return; }
+        const maps = ownedCountMaps(store);
+        const keep = new Set();
+        const apply = (cell, item) => {
+            if (!item) return;
+            const key = ownedNameKey(item.name);
+            if (!key) return;
+            const b = String(maps.bag.get(key) || 0);
+            const w = String(maps.wh.get(key) || 0);
+            if (cell.getAttribute(OWNED_BAG_ATTR) !== b) cell.setAttribute(OWNED_BAG_ATTR, b);
+            if (cell.getAttribute(OWNED_WH_ATTR) !== w) cell.setAttribute(OWNED_WH_ATTR, w);
+            keep.add(cell);
+        };
+        if (sub === 'equip') {
+            const grid = document.querySelector('.bag-page-grid');
+            const paged = store.bagPagedItems ? store.bagPagedItems.value : null;
+            if (!grid || !Array.isArray(paged)) { clearOwnedBadges(null); return; }
+            const cells = grid.children;
+            const n = Math.min(paged.length, cells.length);
+            for (let i = 0; i < n; i++) {
+                const item = paged[i];
+                if (item && item.kind === 'equipment') apply(cells[i], item);
+            }
+        } else {
+            const cells = document.querySelectorAll('.bag-slot.wh-action');
+            for (const cell of cells) {
+                // 仓库装备格的 title 带「（存入者：」，材料/消耗品格子不处理
+                if ((cell.getAttribute('title') || '').indexOf('（存入者：') === -1) continue;
+                apply(cell, warehouseEquipFromCell(store, cell));
+            }
+        }
+        clearOwnedBadges(keep);
     }
 
     /* ============================================================
@@ -4202,15 +4340,10 @@
         return Number.isFinite(n) && RARITY_NAMES[n] ? RARITY_NAMES[n] : '';
     }
 
+    /** v6.07：只保留「锁定装备」这道保护，其余交给服务端校验 */
     function decomposeDisabledReason(store, item) {
-        if (!item) return '没有可分解的装备';
-        if (item.kind !== 'equipment') return '只有装备可以分解';
+        if (!item) return '没有可分解的物品';
         if (item.locked) return '装备已锁定，请先解锁';
-        if (item.cursed) return '红字（被诅咒）装备无法分解';
-        const slot = store.detailEquippedSlot ? store.detailEquippedSlot.value : '';
-        if (slot) return '已穿戴，请先卸下再分解';
-        if (store.detailInInventory && !store.detailInInventory.value) return '物品不在背包中，无法分解';
-        if (!(Number(item.instance_id) > 0)) return '该装备没有实例编号，无法分解';
         return '';
     }
 
@@ -4236,7 +4369,9 @@
     }
 
     function canUseNativeDecompose(store, item) {
-        return !!(store && typeof store.decomposeBagSelection === 'function'
+        // 原生批量分解只处理背包里的装备实例；其它类型一律走单件接口
+        return !!(item && item.kind === 'equipment' && Number(item.instance_id) > 0
+            && store && typeof store.decomposeBagSelection === 'function'
             && typeof store.toggleBagItemSelect === 'function'
             && store.bagSelectedItems && store.bagViewItems
             && itemInBagView(store, item));
@@ -4253,7 +4388,9 @@
             btn.disabled = true;
             btn.title = '无法分解：' + reason;
         } else {
-            btn.title = '分解这件装备' + (rn ? '（' + rn + '）' : '');
+            btn.title = item.kind === 'equipment'
+                ? ('分解这件装备' + (rn ? '（' + rn + '）' : ''))
+                : '分解该物品';
         }
         btn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -4302,7 +4439,7 @@
         }
         if (still === true) {
             const err = store.error ? store.error.value : '';
-            if (err) setDepositMsg(box, String(err), true);
+            setDepositMsg(box, err ? String(err) : '未分解（已取消或游戏不允许该操作）', true);
         }
         return false;
     }
@@ -5363,6 +5500,7 @@
         applyWarehouseWithdrawBox();
         applyWarehouseQuickDeposit();
         applyEquipBagSort();
+        applyOwnedCountBadges();
         applyCraftProtectBuyButton();
         applyClearBoxAllButton();
     }
