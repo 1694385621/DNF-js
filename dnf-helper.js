@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DNF挂机助手
 // @namespace    http://tampermonkey.net/
-// @version      6.07
-// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存；v6.03 消耗品详情同样可存，数量自选）+ 仓库页「一键存仓」（按仓库已有品类以 item_id 匹配背包同款，面板逐品类勾选排除、底部实时显示将存入组数/件数，全部取消时置灰；一次批量提交；v6.05 修复一键存仓品类名被勾选框挤成 0 宽不可见，名称按 item_id 解析并兜底「物品 #id」）+ 背包装备页「按打造程度排序」（强化/增幅/综合降序；v6.07 改为全局重排 inventory 装备行，分页也按全局顺序，切默认/离开装备页自动还原，与原生筛选、多选共存并提示稀有度整理冲突）+ 装备拥有数量角标（红=背包、蓝=仓库，同名不同强化合并，无则灰 0，设置可关）+ 背包装备详情「存仓」「分解」（v6.07 去掉类型/白名单预判，按钮始终可点，失败用服务端文案提示；分解仅保留锁定保护；已有「上架拍卖」入口的材料/消耗品只保留上架，不注入这一组）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 游戏原挂机助手（光球/悬浮面板）默认隐藏 + 挂机浮窗「挂机页设置」提供「打开游戏挂机面板」替代入口（直接调用原生光球 click，不改原生结构）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情；v5.101 收纳史诗/传说 + Lv85 神器散件共 1,166 条，新增「神器/史诗/传说」品质筛选、武器按职业→类型三级分类、分批渲染，右上角「刷新」需二次确认；首次打开按需加载，ID 段枚举 + 逐件拉取带进度/可停止/失败重试，localStorage 缓存 7 天，内置最小基线兜底）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（174 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存；v5.101 补「回避率」映射、右上角刷新需二次确认）+ 打造页保护券「购买」入口（插件内面板直购商城材料里的强化/增幅保护券，金币支付、买不起置灰说明，不跳转游戏商城）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账；v6.03 未学习的技能先 skill-learn / 被动 tp-learn 再逐级升到目标）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
+// @version      6.08
+// @description  挂机统计浮窗（首次默认左上角、折叠胶囊可拖动/左右贴边吸附并记忆位置、窄屏自适应不溢出；设置面板移动端完整可见可滚动）+ 掉落/技能日志 + 怪物血条线性百分比（5 位小数精度，百万血不再卡住不动）+ HP/MP 血条修复 + 打造跳转修复 + 仓库装备/仓库材料置顶 + 背包详情「存仓」按钮（锁定装备也可存；v6.03 消耗品详情同样可存，数量自选）+ 仓库页「一键存仓」（按仓库已有品类以 item_id 匹配背包同款，面板逐品类勾选排除、底部实时显示将存入组数/件数，全部取消时置灰；一次批量提交；v6.05 修复一键存仓品类名被勾选框挤成 0 宽不可见，名称按 item_id 解析并兜底「物品 #id」）+ 背包装备页「按打造程度排序」（强化/增幅/综合降序；v6.07 改为全局重排 inventory 装备行，分页也按全局顺序，切默认/离开装备页自动还原，与原生筛选、多选共存并提示稀有度整理冲突）+ 装备拥有数量角标（红=背包、蓝=仓库，同名不同强化合并，无则灰 0，设置可关）+ 背包装备详情「存仓」「分解」（v6.07 去掉类型/白名单预判，按钮始终可点，失败用服务端文案提示；分解仅保留锁定保护；v6.08 背包所有子页统一注入存仓/分解，上架拍卖仅在游戏原生没有该按钮时才补，避免重复）+ 仓库装备「点击先看详情、再确认取出」（取消不发请求）+ 仓库材料「自选数量取出」（默认整组、超限回填、取消不发请求；v5.97 按渲染同源列表定位，修复增幅券等带空格道具无法取出、筛选后可能取错物品）+ 通关秘宝盒「按批全开」（每批 10 个、批间约 120ms、可停止）+ 游戏红字同步提示（监听游戏 .error，把文案用插件原样式贴顶提示）+ 游戏原挂机助手（光球/悬浮面板）默认隐藏 + 挂机浮窗「挂机页设置」提供「打开游戏挂机面板」替代入口（直接调用原生光球 click，不改原生结构）+ 联网检查更新（只提示不执行，点击跳转下载页；设置面板可手动检查/关闭自动检查；按 ghproxy→raw→jsDelivr 多源依次取 version.json，下载链接跟随实际成功源）+ 装备图鉴（HUD 日志旁入口：按游戏「大类/职业/部位/甲种」分类筛选 + 搜索 + 详情；v5.101 收纳史诗/传说 + Lv85 神器散件共 1,166 条，新增「神器/史诗/传说」品质筛选、武器按职业→类型三级分类、分批渲染，右上角「刷新」需二次确认；首次打开按需加载，ID 段枚举 + 逐件拉取带进度/可停止/失败重试，localStorage 缓存 7 天，内置最小基线兜底）+ 顶部重复「世界BOSS」按钮移除 + 「兑换码」移到商店「通用制作」旁（以上两项仅移动端 ≤760px 生效，桌面端保持游戏原样）+ 移除仓库区块排序 + 宝珠图鉴（174 条，属性类型/可附魔部位/稀有度三级筛选，数据来自 /api/orbs，图标按 id 补齐并本地缓存；v5.101 补「回避率」映射、右上角刷新需二次确认）+ 打造页保护券「购买」入口（插件内面板直购商城材料里的强化/增幅保护券，金币支付、买不起置灰说明，不跳转游戏商城）+ 手动分解后提示实际所得（读服务端 outputs，按物品聚合）+ 背包装备详情「分解」按钮（走游戏原生分解确认/提示；失败降级单件接口）+ 排行榜角色详情「复制技能」（游戏原生详情弹窗「技能配置」块之后追加按钮，不改原生结构；同职业同成长方向才可用，点击才拉一次 profile，两段式归零→逐级升级，结束对账；v6.03 未学习的技能先 skill-learn / 被动 tp-learn 再逐级升到目标）+ 模块顺序平板栏内排序（761–1200px 左栏/中栏内部可上下互换，v5.98 功能框并入中栏、可与日志框互换，手机单列与桌面三栏行为不变）+ 背包材料/消耗品详情「上架拍卖」（调用游戏原生上架面板并预选物品，绑定/不可交易置灰说明；v5.99 面板弹出后自动收起详情，不再压住数量/价格/确认上架）+ 收益弹窗（旁路读取 bag-filter-apply 与分解接口，统一弹窗展示出售件数/金币、分解产物；v5.98 无分解时不显示分解段、出售品质推断剔除 price=0 的自动转分解项；装备详情页分解也走同一弹窗）。
 // @author       You
 // @match        *://shileshihu.cn/*
 // @match        *://www.shileshihu.cn/*
@@ -263,7 +263,7 @@
     };
 
     /** 脚本版本（正文统一引用，升级只需改这里 + @version 元数据） */
-    const VERSION = '6.07';
+    const VERSION = '6.08';
 
     /**
      * 游戏接口 GET 统一超时（v5.90）
@@ -3658,9 +3658,10 @@
         if (existing && existing.dataset.depositKey === key) return;
         if (existing) existing.remove();
 
-        // v6.07：材料/消耗品等详情已有「上架拍卖」入口，不再注入存仓/分解这一组；
-        // 装备详情没有上架入口，注入存仓 + 分解（锁定装备保留分解保护）。
-        const hasAuctionEntry = item.kind !== 'equipment';
+        // v6.08：详情里已有游戏原生「上架拍卖」时不再重复注入；
+        // 存仓/分解在背包所有子页、所有类型都保留（锁定装备分解置灰）。
+        const nativeAuction = Array.from(actions.querySelectorAll('button')).some(b =>
+            !b.closest('[data-dnf-deposit-box]') && /上架\s*拍卖/.test((b.textContent || '').trim()));
 
         const box = document.createElement('div');
         box.className = 'dnf-deposit-box';
@@ -3668,14 +3669,27 @@
         box.dataset.depositKey = key;
         _depositBoxEl = box;
 
-        const msg = document.createElement('div');
-        msg.className = 'dnf-deposit-msg';
-
-        if (hasAuctionEntry) {
-            box.append(createAuctionButton(store, box, item));
-            box.append(msg);
-            actions.appendChild(box);
-            return;
+        // 材料可堆叠时给数量输入：默认整组，可改，上限=持有数
+        if (item.kind !== 'equipment' && stackCount > 1) {
+            const label = document.createElement('span');
+            label.className = 'dnf-deposit-label';
+            label.textContent = '数量';
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'dnf-deposit-qty';
+            input.min = '1';
+            input.max = String(stackCount);
+            input.step = '1';
+            input.value = String(stackCount);
+            input.title = '存入数量（最多 ' + stackCount + ' 个）';
+            input.setAttribute('aria-label', '存入数量');
+            input.addEventListener('input', () => {
+                const max = Math.max(1, stackCount);
+                let n = parseInt(input.value, 10);
+                if (!Number.isFinite(n) || n < 1) return; // 允许暂时清空输入
+                if (n > max) { n = max; input.value = String(n); }
+            });
+            box.append(label, input);
         }
 
         const btn = document.createElement('button');
@@ -3685,13 +3699,20 @@
         btn.title = '存入共享仓库';
         // v6.07：不再按类型/白名单预判，按钮始终可点，失败由服务端文案提示
 
+        const msg = document.createElement('div');
+        msg.className = 'dnf-deposit-msg';
+
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             depositDetailItem(store, box);
         });
         box.append(btn);
-        // v6.07：装备详情始终显示分解；锁定装备保留置灰保护
+        // 上架拍卖：原生已有就不重复加（装备原生已有上架入口，插件也不再加）
+        if (!nativeAuction && item.kind !== 'equipment') {
+            box.append(createAuctionButton(store, box, item));
+        }
+        // 存仓/分解在背包所有类型都显示；锁定装备的分解按钮置灰
         box.append(createDecomposeButton(store, box, item));
         box.append(msg);
         actions.appendChild(box);
